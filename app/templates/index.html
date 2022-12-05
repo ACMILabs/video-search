@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACMI Video search</title>
+</head>
+<body>
+    <h1><a href="/">Video search</a></h1>
+    <h2>Enter the words you'd like to search...</h2>
+
+    <form action="/" method="get">
+        <input name="query" type="text" placeholder="Search terms" value="{% if query%}{{ query }}{% else %}{% endif %}" autofocus>
+    </form>
+
+    {% if query %}
+        <h3>Results: {{ results.hits.total.value }}</h3>
+        {% for result in results.hits.hits %}
+            <p><strong>ID</strong>: {{ result._id }}</p>
+            <p><strong>Score</strong>: {{ result._score }}</p>
+            <p><strong>Title</strong>: {{ result._source.title }}</p>
+            <p><strong>Segments</strong>: </p>
+            {% for segment in result._source.transcription.segments %}
+                {% if query|lower in segment.text|lower %}
+                    <p>{{ segment.start|int }} secs: {{ segment.text }}</p>
+                {% endif %}
+            {% endfor %}
+            <hr>
+        {% endfor %}
+    {% endif %}
+
+</body>
+</html>

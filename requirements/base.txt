@@ -1,0 +1,5 @@
+flask
+gunicorn
+pytz
+requests
+elasticsearch>=7.16,<8
