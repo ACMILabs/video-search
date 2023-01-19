@@ -5,6 +5,8 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ACMI Video search</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/index.css') }}">
+    <script src="{{ url_for('static', filename='js/index.js') }}"></script>
 </head>
 <body>
     <h1><a href="/">Video search</a></h1>
@@ -17,16 +19,34 @@
     {% if query %}
         <h3>Results: {{ results.hits.total.value }}</h3>
         {% for result in results.hits.hits %}
-            <p><strong>ID</strong>: {{ result._id }}</p>
-            <p><strong>Score</strong>: {{ result._score }}</p>
-            <p><strong>Title</strong>: {{ result._source.title }}</p>
-            <p><strong>Segments</strong>: </p>
-            {% for segment in result._source.transcription.segments %}
-                {% if query|lower in segment.text|lower %}
-                    <p>{{ segment.start|int }} secs: {{ segment.text }}</p>
-                {% endif %}
-            {% endfor %}
-            <hr>
+            <div class="result">
+                <video
+                    id="video-{{ result._id }}"
+                    src="{{ result._source.web_resource }}"
+                    poster="{{ result._source.snapshot }}"
+                    controls
+                    width="100%"
+                    preload="none"
+                >
+                </video>
+                <p><strong>ID</strong>: {{ result._id }}</p>
+                <p><strong>Score</strong>: {{ result._score }}</p>
+                <p><strong>Title</strong>: {{ result._source.title }}</p>
+                <p><strong>Segments</strong>: </p>
+                <div class="segments">
+                    {% for segment in result._source.transcription.segments %}
+                        {% if query|lower in segment.text|lower %}
+                            <p>
+                                <a href="#a" onclick="setPlaybackTime({{ result._id }}, {{ segment.start|int }})">
+                                    {{ segment.start|int|seconds_to_timecode }}
+                                </a> - <a href="#a" onclick="setPlaybackTime({{ result._id }}, {{ segment.start|int }})">
+                                    {{ segment.text }}
+                                </a>
+                            </p>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
         {% endfor %}
     {% endif %}
 

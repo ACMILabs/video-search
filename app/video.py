@@ -1,5 +1,6 @@
 import json
 import os
+from math import floor
 
 import elasticsearch
 import requests
@@ -39,6 +40,24 @@ def home():
         query=query,
         results=results,
     )
+
+
+@application.template_filter('seconds_to_timecode')
+def seconds_to_timecode_filter(seconds):
+    timecode_seconds = str(floor(seconds % 60))
+    timecode_minutes = str(floor((seconds / 60) % 60))
+    timecode_hours = str(floor(seconds / 60 / 60))
+    timecode_seconds = pad_with_leading_zero(timecode_seconds)
+    timecode_minutes = pad_with_leading_zero(timecode_minutes)
+    timecode_hours = pad_with_leading_zero(timecode_hours)
+    return f'{timecode_hours}:{timecode_minutes}:{timecode_seconds}'
+
+
+def pad_with_leading_zero(number):
+    padded_number = number
+    if len(str(padded_number)) == 1:
+        padded_number = f'0{padded_number}'
+    return padded_number
 
 
 class Search():

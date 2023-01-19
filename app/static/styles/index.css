@@ -1,0 +1,23 @@
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+.result {
+    border: 1px solid lightgrey;
+    padding: 1rem;
+    margin: 1rem;
+    width: 20%;
+    height: 32rem;
+    float: left;
+    overflow-y: hidden;
+}
+
+.segments {
+    height: 10rem;
+    overflow-y: scroll;
+}
