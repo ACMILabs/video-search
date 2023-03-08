@@ -75,7 +75,7 @@ class Search():
                 api_key=ELASTICSEARCH_API_KEY,
             )
 
-    def search(self, args, resource='video'):
+    def search(self, args, resource='videos'):
         """
         Perform a search for a query string in the index (resource).
         """
@@ -139,7 +139,7 @@ class Search():
             print(f'ERROR indexing {json_data.get("id")}: {exception}')
             return success
 
-    def index_all(self, resource='video'):
+    def index_all(self, resource='videos'):
         """
         Index all of the objects for this resource.
         """
@@ -150,7 +150,7 @@ class Search():
         page = 1
         api = None
 
-        if resource == 'video':
+        if resource == 'videos':
             api = 'assets'
 
         while next_page:
