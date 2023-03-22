@@ -28,7 +28,7 @@ def home():
     args = request.args.copy()
     field = request.args.get('field', None)
     if not field:
-        args['field'] = 'transcription.text'
+        args['field'] = 'transcription.segments.text'
     query = request.args.get('query', None)
 
     if query:
@@ -98,8 +98,8 @@ class Search():
 
         if field:
             query_body['query'] = {
-                'match': {
-                    field: query
+                'match_phrase_prefix': {
+                    field: query,
                 }
             }
             search_results = self.elastic_search.search(index=resource, body=query_body)

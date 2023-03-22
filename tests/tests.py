@@ -13,10 +13,16 @@ mock_search = {
             '_source': {
                 'title': 'A video',
                 'transcription': {
-                    'segments': [{
-                        'text': 'A segment',
-                        'start': 4,
-                    }],
+                    'segments': [
+                        {
+                            'text': 'A segment',
+                            'start': 4,
+                        },
+                        {
+                            'text': 'three large elephants',
+                            'start': 9,
+                        },
+                    ],
                 },
             },
         }],
@@ -38,3 +44,16 @@ def test_root(_):
         assert response.status_code == 200
         assert 'A video' in response.text
         assert 'A segment' in response.text
+        assert 'elephants' not in response.text
+
+        response = client.get('/?query=large+elephants')
+        assert response.status_code == 200
+        assert 'A video' in response.text
+        assert 'A segment' not in response.text
+        assert 'three large elephants' in response.text
+
+        response = client.get('/?query=four+large+elephants')
+        assert response.status_code == 200
+        assert 'A video' in response.text
+        assert 'A segment' not in response.text
+        assert 'three large elephants' not in response.text
