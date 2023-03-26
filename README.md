@@ -46,4 +46,6 @@ To run linting and tests:
 
 ## Architecture
 
-TODO: documentation
+* Production index runs on [Elastic Cloud](https://www.elastic.co/cloud)
+* Re-indexing of public videos happens nightly
+* ACMI website uses this index for search results: https://www.acmi.net.au/videos/
