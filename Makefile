@@ -20,10 +20,10 @@ test:
 	pytest -v -s tests/tests.py
 linttest: lint test
 base:
-	docker-compose -f development/docker-compose-base.yml up
+	docker compose -f development/docker-compose-base.yml up
 build:
-	docker-compose -f development/docker-compose.yml up --build
+	docker compose -f development/docker-compose.yml up --build
 up:
-	docker-compose -f development/docker-compose.yml up
+	docker compose -f development/docker-compose.yml up
 down:
-	docker-compose -f development/docker-compose.yml down
+	docker compose -f development/docker-compose.yml down

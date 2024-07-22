@@ -4,6 +4,8 @@ A video search for XOS Videos that have transcriptions.
 
 ![ACMI Video Search CI](https://github.com/ACMILabs/video-search/workflows/ACMI%20Video%20Search%20CI/badge.svg)
 
+<img src="video-search.png" width="50%" alt="ACMI Video search" title="ACMI Video search" /><img src="video-search.gif" width="50%" alt="ACMI Video search screen recording" title="ACMI Video search screen recording" />
+
 ## Search
 
 Search is handled by Elasticsearch.
