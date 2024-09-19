@@ -7,17 +7,61 @@ a:hover {
     text-decoration: underline;
 }
 
+body {
+    text-align: center;
+}
+
+dt, dd {
+    display: inline-flex;
+}
+
+dt {
+    width: 4.5rem;
+}
+
+dd {
+    margin-inline-start: 0rem;
+    max-width: 70%;
+    margin-bottom: 1rem;
+}
+
+h3 {
+    word-wrap: break-word;
+}
+
+video {
+    height: 14rem;
+}
+
+.container {
+    display: block;
+}
+
 .result {
     border: 1px solid lightgrey;
     padding: 1rem;
     margin: 1rem;
     width: 20%;
     height: 32rem;
-    float: left;
+    display: inline-block;
     overflow-y: hidden;
+    text-align: left;
 }
 
 .segments {
-    height: 10rem;
+    height: 13rem;
     overflow-y: scroll;
+    text-align: left;
+}
+
+@media only screen and (max-width: 768px) {
+    .result {
+        width: 30%;
+    }
+}
+
+@media only screen and (max-width: 480px) {
+    .result {
+        width: 80%;
+    }
 }

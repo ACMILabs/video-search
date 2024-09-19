@@ -10,14 +10,26 @@
 </head>
 <body>
     <h1><a href="/">Video search</a></h1>
-    <h2>Enter the words you'd like to search...</h2>
 
     <form action="/" method="get">
         <input name="query" type="text" placeholder="Search terms" value="{% if query%}{{ query }}{% else %}{% endif %}" autofocus>
+        <select name="searchType" id="searchType" onchange="this.form.submit()">
+            <option value="audio" {% if search_type == "audio" %}selected{% endif %}>Audio transcription</option>
+            <option value="audioDescription" {% if search_type == "audioDescription" %}selected{% endif %}>Audio description</option>
+            <option value="image" {% if search_type == "image" %}selected{% endif %}>Image frame content</option>
+        </select>
     </form>
 
     {% if query %}
         <h3>Results: {{ results.hits.total.value }}</h3>
+        {% if results.hits.total.value > size %}
+        <p>
+            {% if page > 1 %}<a href="/?query={{ request.args.query }}&searchType={{ request.args.searchType }}&size={{ size }}&page={{ page - 1 }}">Previous</a>{% endif %}
+            {% if page > 1 %}- page {{ page }} -{% endif %}
+            {% if page < (results.hits.total.value / size) %}<a href="/?query={{ request.args.query }}&searchType={{ request.args.searchType }}&size={{ size }}&page={{ page + 1 }}">Next</a>{% endif %}
+        </p>
+        {% endif %}
+        <div class="container">
         {% for result in results.hits.hits %}
             <div class="result">
                 <video
@@ -29,25 +41,69 @@
                     preload="none"
                 >
                 </video>
-                <p><strong>ID</strong>: {{ result._id }}</p>
-                <p><strong>Score</strong>: {{ result._score }}</p>
-                <p><strong>Title</strong>: {{ result._source.title }}</p>
+                <h3>{{ result._source.title }}</h3>
                 <p><strong>Segments</strong>: </p>
-                <div class="segments">
+                {% if search_type == "audio" %}
+                <dl class="segments">
                     {% for segment in result._source.transcription.segments %}
+                    <div class="segment">
                         {% if query|lower in segment.text|lower %}
-                            <p>
-                                <a href="#a" onclick="setPlaybackTime({{ result._id }}, {{ segment.start|int }})">
-                                    {{ segment.start|int|seconds_to_timecode }}
-                                </a> - <a href="#a" onclick="setPlaybackTime({{ result._id }}, {{ segment.start|int }})">
-                                    {{ segment.text }}
-                                </a>
-                            </p>
+                        <dt>
+                            <a href="#a" onclick="setPlaybackTime({{ result._id }}, {{ segment.start|int }})">
+                                {{ segment.start|int|seconds_to_timecode }}
+                            </a>
+                        </dt>
+                        <dd>
+                            <a href="#a" onclick="setPlaybackTime({{ result._id }}, {{ segment.start|int }})">
+                                {{ segment.text }}
+                            </a>
+                        </dd>
                         {% endif %}
+                    </div>
                     {% endfor %}
-                </div>
+                </dl>
+                {% elif search_type == "audioDescription" %}
+                <dl class="segments">
+                    {% for segment in result._source.classification.captions.clap %}
+                    <div class="segment">
+                        {% if query|lower in segment.predictions.0.prediction|lower %}
+                        <dt>
+                            <a href="#a" onclick="setPlaybackTime({{ result._id }}, {{ segment.timestamp|int }})">
+                                {{ segment.timestamp|int|seconds_to_timecode }}
+                            </a>
+                        </dt>
+                        <dd>
+                            <a href="#a" onclick="setPlaybackTime({{ result._id }}, {{ segment.timestamp|int }})">
+                                {{ segment.predictions.0.prediction }}
+                            </a>
+                        </dd>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </dl>
+                {% else %}
+                <dl class="segments">
+                    {% for segment in result._source.classification.captions.huggingface %}
+                    <div class="segment">
+                        {% if query|lower in segment.predictions.0.prediction|lower %}
+                        <dt>
+                            <a href="#a" onclick="setPlaybackTime({{ result._id }}, {{ segment.timestamp|int }})">
+                                {{ segment.timestamp|int|seconds_to_timecode }}
+                            </a>
+                        </dt>
+                        <dd>
+                            <a href="#a" onclick="setPlaybackTime({{ result._id }}, {{ segment.timestamp|int }})">
+                                {{ segment.predictions.0.prediction }}
+                            </a>
+                        </dd>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </dl>
+                {% endif %}
             </div>
         {% endfor %}
+        </div>
     {% endif %}
 
 </body>

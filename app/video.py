@@ -17,6 +17,7 @@ ELASTICSEARCH_CLOUD_ID = os.getenv('ELASTICSEARCH_CLOUD_ID')
 ELASTICSEARCH_API_KEY = os.getenv('ELASTICSEARCH_API_KEY')
 
 application = Flask(__name__)
+application.config['TEMPLATES_AUTO_RELOAD'] = True
 
 
 @application.route('/')
@@ -26,10 +27,10 @@ def home():
     """
     results = None
     args = request.args.copy()
-    field = request.args.get('field', None)
-    if not field:
-        args['field'] = 'transcription.segments.text'
     query = request.args.get('query', None)
+    size = args.get('size', type=int, default=20)
+    page = args.get('page', type=int, default=1)
+    search_type = request.args.get('searchType', 'audio')
 
     if query:
         search = Search()
@@ -39,6 +40,9 @@ def home():
         'index.html',
         query=query,
         results=results,
+        search_type=search_type,
+        size=size,
+        page=page,
     )
 
 
@@ -81,9 +85,14 @@ class Search():
         """
         query_body = {}
         query = args.get('query')
-        field = args.get('field')
+        field = args.get('field', 'transcription.segments.text')
         size = args.get('size', type=int, default=20)
         page = args.get('page', type=int, default=1)
+        search_type = args.get('searchType', 'audio')
+        if search_type == 'image':
+            field = 'classification.captions.huggingface.predictions.prediction'
+        elif search_type == 'audioDescription':
+            field = 'classification.captions.clap.predictions.prediction'
         # Limit search results per page to 50
         size = min(size, 50)
         query_body['size'] = size
@@ -96,19 +105,12 @@ class Search():
             page = (page - 1) * size
         query_body['from'] = page
 
-        if field:
-            query_body['query'] = {
-                'match_phrase_prefix': {
-                    field: query,
-                }
+        query_body['query'] = {
+            'match_phrase': {
+                field: query,
             }
-            search_results = self.elastic_search.search(index=resource, body=query_body)
-        else:
-            search_results = self.elastic_search.search(  # pylint: disable=unexpected-keyword-arg
-                index=resource,
-                q=query,
-                params=query_body,
-            )
+        }
+        search_results = self.elastic_search.search(index=resource, body=query_body)
 
         return search_results
 
@@ -120,7 +122,7 @@ class Search():
 
         # Handle tags
         tags_dictionary = {}
-        for tag in json_data.get('tags'):
+        for tag in json_data.get('tags') or []:
             tags_dictionary[tag[0]] = tag[1]
         json_data['tags'] = json.dumps(tags_dictionary)
         try:
@@ -161,7 +163,7 @@ class Search():
             }
             response = client.get(resource=api, params=params).json()
             for result in response['results']:
-                if result['transcription']:
+                if result['transcription'] or result['classification']:
                     if not self.index(resource, result):
                         failed.append(result['id'])
             page += 1

@@ -6,3 +6,4 @@ isort>=4.2.5,<5
 pylint
 pytest
 pytest-flask
+setuptools
