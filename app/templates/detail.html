@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACMI Video details - {{ video.title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/index.css') }}">
+    <script src="{{ url_for('static', filename='js/index.js') }}"></script>
+</head>
+<body>
+    <div class="container">
+        <video
+            id="video-{{ video._id }}"
+            src="{{ video._source.web_resource }}"
+            poster="{{ video._source.snapshot }}"
+            controls
+            width="100%"
+            preload="none"
+            class="video-detail"
+        >
+        </video>
+        <div class="video">
+            <a name="top"></a>
+            <h2><a href="/videos/{{ video._source.id }}/">{{ video._source.title }}</a></h2>
+            <dl class="metadata">
+                <dt>Duration</dt>
+                <dd>{{ video._source.master_metadata.duration_hms }}</dd>
+                <dt>Metadata</dt>
+                <dd>{{ video._source.master_metadata.width }} x {{ video._source.master_metadata.height }} @ {{ video._source.master_metadata.video_frame_rate }} fps</dd>
+            </dl>
+            <h3><a href="#transcriptions">Audio transcriptions</a>, <a href="#descriptions">audio descriptions</a>, <a href="#images">image captions</a></h3>
+            <h3>Tags</h3>
+            <p>
+                {{ video._source.tags|tags_to_string }}
+            </p>
+            <a name="transcriptions"></a>
+            <h3>Audio transcriptions</h3>
+            <dl class="segments">
+                {% for segment in video._source.transcription.segments %}
+                <div class="segment">
+                    {% if query|lower in segment.text|lower %}
+                    <dt>
+                        <a href="#a" onclick="setPlaybackTime({{ video._id }}, {{ segment.start|int }})">
+                            {{ segment.start|int|seconds_to_timecode }}
+                        </a>
+                    </dt>
+                    <dd>
+                        <a href="#a" onclick="setPlaybackTime({{ video._id }}, {{ segment.start|int }})">
+                            {{ segment.text }}
+                        </a>
+                    </dd>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </dl>
+            <a name="descriptions"></a>
+            <h3>Audio descriptions (<a href="#top">top</a>)</h3>
+            <dl class="segments">
+                {% for segment in video._source.classification.captions.clap %}
+                <div class="segment">
+                    {% if query|lower in segment.predictions.0.prediction|lower %}
+                    <dt>
+                        <a href="#a" onclick="setPlaybackTime({{ video._id }}, {{ segment.timestamp|int }})">
+                            {{ segment.timestamp|int|seconds_to_timecode }}
+                        </a>
+                    </dt>
+                    <dd>
+                        <a href="#a" onclick="setPlaybackTime({{ video._id }}, {{ segment.timestamp|int }})">
+                            {{ segment.predictions.0.prediction }}
+                        </a>
+                    </dd>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </dl>
+            <a name="images"></a>
+            <h3>Image captions (<a href="#top">top</a>)</h3>
+            <dl class="segments">
+                {% for segment in video._source.classification.captions.huggingface %}
+                <div class="segment">
+                    {% if query|lower in segment.predictions.0.prediction|lower %}
+                    <dt>
+                        <a href="#a" onclick="setPlaybackTime({{ video._id }}, {{ segment.timestamp|int }})">
+                            {{ segment.timestamp|int|seconds_to_timecode }}
+                        </a>
+                    </dt>
+                    <dd>
+                        <a href="#a" onclick="setPlaybackTime({{ video._id }}, {{ segment.timestamp|int }})">
+                            {{ segment.predictions.0.prediction }}
+                        </a>
+                    </dd>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </dl>
+        </div>
+    </div>
+
+</body>
+</html>

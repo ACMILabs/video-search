@@ -49,6 +49,26 @@ def home():
     )
 
 
+@application.route('/videos/<video_id>/')
+def video_detail(video_id):
+    """
+    Video detail page.
+    """
+    search = Search()
+    video = search.get_video(video_id)
+
+    return render_template(
+        'detail.html',
+        video=video,
+    )
+
+
+@application.template_filter('tags_to_string')
+def seconds_to_timecode_filter(tags):
+    tags = json.loads(tags)
+    return ', '.join([f'{key} ({tags[key]})' for key in tags.keys() if key])
+
+
 @application.template_filter('seconds_to_timecode')
 def seconds_to_timecode_filter(seconds):
     timecode_seconds = str(floor(seconds % 60))
@@ -125,6 +145,15 @@ class Search():
             errors = exception
 
         return search_results, errors
+
+    def get_video(self, video_id, resource='videos'):
+        """
+        Get a Video by its ID.
+        """
+        return self.elastic_search.search(
+            index=ELASTICSEARCH_INDEX_NAME or resource,
+            body={'query': {'match_phrase': {'id': video_id}}}
+        )['hits']['hits'][0]
 
     def index(self, resource, json_data):
         """

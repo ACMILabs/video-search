@@ -37,6 +37,26 @@ video {
     display: block;
 }
 
+.video-detail {
+    height: 40vh;
+}
+
+.container .video {
+    max-width: 50rem;
+    margin: 0 auto;
+    text-align: left;
+    overflow-y: scroll;
+    height: 58vh;
+}
+
+.metadata dt {
+    width: 20%;
+}
+
+.metadata dd {
+    width: 70%;
+}
+
 .result {
     border: 1px solid lightgrey;
     padding: 1rem;
@@ -52,6 +72,10 @@ video {
     height: 13rem;
     overflow-y: scroll;
     text-align: left;
+}
+
+.video .segments {
+    height: auto;
 }
 
 @media only screen and (max-width: 768px) {

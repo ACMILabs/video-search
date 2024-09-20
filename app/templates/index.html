@@ -41,7 +41,7 @@
                     preload="none"
                 >
                 </video>
-                <h3>{{ result._source.title }}</h3>
+                <h3><a href="/videos/{{ result._source.id }}/">{{ result._source.title }}</a></h3>
                 <p><strong>Segments</strong>: </p>
                 {% if search_type == "audio" %}
                 <dl class="segments">
