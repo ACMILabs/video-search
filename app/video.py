@@ -64,13 +64,21 @@ def video_detail(video_id):
 
 
 @application.template_filter('tags_to_string')
-def seconds_to_timecode_filter(tags):
+def tags_to_string(tags):
+    """
+    Converts a JSON dictionary of tag data to a formatted string.
+    Input: {"music": 69, "frog": 26, "water": 18}
+    Output: music (69), frog (26), water (18)
+    """
     tags = json.loads(tags)
     return ', '.join([f'{key} ({tags[key]})' for key in tags.keys() if key])
 
 
 @application.template_filter('seconds_to_timecode')
 def seconds_to_timecode_filter(seconds):
+    """
+    Converts an integer of seconds into timecode format.
+    """
     timecode_seconds = str(floor(seconds % 60))
     timecode_minutes = str(floor((seconds / 60) % 60))
     timecode_hours = str(floor(seconds / 60 / 60))
@@ -81,6 +89,9 @@ def seconds_to_timecode_filter(seconds):
 
 
 def pad_with_leading_zero(number):
+    """
+    Add leading zeros to a single digit number.
+    """
     padded_number = number
     if len(str(padded_number)) == 1:
         padded_number = f'0{padded_number}'
