@@ -27,7 +27,7 @@ mock_search = {
             },
         }],
     },
-}
+}, {}
 
 
 @patch('app.video.Search.search', return_value=mock_search)

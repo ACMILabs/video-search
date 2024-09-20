@@ -20,7 +20,7 @@
         </select>
     </form>
 
-    {% if query %}
+    {% if query and results %}
         <h3>Results: {{ results.hits.total.value }}</h3>
         {% if results.hits.total.value > size %}
         <p>
@@ -104,6 +104,11 @@
             </div>
         {% endfor %}
         </div>
+    {% endif %}
+    {% if errors %}
+        <h3>Error</h3>
+        <p>Have you indexed any videos?</p>
+        <p>{{ errors }}</p>
     {% endif %}
 
 </body>

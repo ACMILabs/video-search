@@ -15,9 +15,10 @@ XOS_TIMEOUT = int(os.getenv('XOS_TIMEOUT', '60'))
 ELASTICSEARCH_HOST = os.getenv('ELASTICSEARCH_HOST', 'http://video-search:9200')
 ELASTICSEARCH_CLOUD_ID = os.getenv('ELASTICSEARCH_CLOUD_ID')
 ELASTICSEARCH_API_KEY = os.getenv('ELASTICSEARCH_API_KEY')
+ELASTICSEARCH_INDEX_NAME = os.getenv('ELASTICSEARCH_INDEX_NAME', None)
 
 application = Flask(__name__)
-application.config['TEMPLATES_AUTO_RELOAD'] = True
+application.config['TEMPLATES_AUTO_RELOAD'] = DEBUG
 
 
 @application.route('/')
@@ -26,6 +27,7 @@ def home():
     Video search home page.
     """
     results = None
+    errors = None
     args = request.args.copy()
     query = request.args.get('query', None)
     size = args.get('size', type=int, default=20)
@@ -34,7 +36,7 @@ def home():
 
     if query:
         search = Search()
-        results = search.search(args)
+        results, errors = search.search(args)
 
     return render_template(
         'index.html',
@@ -43,6 +45,7 @@ def home():
         search_type=search_type,
         size=size,
         page=page,
+        errors=errors,
     )
 
 
@@ -84,6 +87,8 @@ class Search():
         Perform a search for a query string in the index (resource).
         """
         query_body = {}
+        search_results = None
+        errors = None
         query = args.get('query')
         field = args.get('field', 'transcription.segments.text')
         size = args.get('size', type=int, default=20)
@@ -110,9 +115,16 @@ class Search():
                 field: query,
             }
         }
-        search_results = self.elastic_search.search(index=resource, body=query_body)
+        try:
+            search_results = self.elastic_search.search(
+                index=ELASTICSEARCH_INDEX_NAME or resource,
+                body=query_body,
+            )
+        except elasticsearch.NotFoundError as exception:
+            print(f'ERROR: {exception}')
+            errors = exception
 
-        return search_results
+        return search_results, errors
 
     def index(self, resource, json_data):
         """
@@ -127,7 +139,7 @@ class Search():
         json_data['tags'] = json.dumps(tags_dictionary)
         try:
             self.elastic_search.index(
-                index=resource,
+                index=ELASTICSEARCH_INDEX_NAME or resource,
                 id=json_data.get('id'),
                 body=json_data,
             )
