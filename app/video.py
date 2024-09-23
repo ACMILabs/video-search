@@ -1,6 +1,7 @@
 import json
 import os
 from math import floor
+from pathlib import Path
 
 import elasticsearch
 import requests
@@ -17,6 +18,7 @@ ELASTICSEARCH_CLOUD_ID = os.getenv('ELASTICSEARCH_CLOUD_ID')
 ELASTICSEARCH_API_KEY = os.getenv('ELASTICSEARCH_API_KEY')
 ELASTICSEARCH_INDEX_NAME = os.getenv('ELASTICSEARCH_INDEX_NAME', None)
 PORT = int(os.getenv('PORT', '8081'))
+EXPORT_VIDEO_JSON = os.getenv('EXPORT_VIDEO_JSON', 'false').lower() == 'true'
 
 application = Flask(__name__)
 application.config['TEMPLATES_AUTO_RELOAD'] = DEBUG
@@ -61,6 +63,7 @@ def video_detail(video_id):
     return render_template(
         'detail.html',
         video=video,
+        export_json=EXPORT_VIDEO_JSON,
     )
 
 
@@ -167,7 +170,7 @@ class Search():
             body={'query': {'match_phrase': {'id': video_id}}}
         )['hits']['hits'][0]
 
-    def index(self, resource, json_data):
+    def index(self, resource, json_data, export=EXPORT_VIDEO_JSON):
         """
         Update the search index for a single record.
         """
@@ -178,6 +181,10 @@ class Search():
         for tag in json_data.get('tags') or []:
             tags_dictionary[tag[0]] = tag[1]
         json_data['tags'] = json.dumps(tags_dictionary)
+
+        if export:
+            self.export_video_json(json_data)
+
         try:
             self.elastic_search.index(
                 index=ELASTICSEARCH_INDEX_NAME or resource,
@@ -223,6 +230,15 @@ class Search():
             next_page = response['next']
         if failed:
             print(f'Finished. Failed {len(failed)}: {failed}')
+
+    def export_video_json(self, json_data):
+        """
+        Save the json_data to the file system using the filename as the title.
+        """
+        Path('app/static/json').mkdir(exist_ok=True)
+        title = json_data.get('title') or json_data.get('id')
+        with open(f'app/static/json/{title}.json', 'w', encoding='utf-8') as video_file:
+            json.dump(json_data, video_file, ensure_ascii=False, indent=4)
 
 
 class XOSAPI():  # pylint: disable=too-few-public-methods

@@ -28,6 +28,10 @@
                 <dd>{{ video._source.master_metadata.duration_hms }}</dd>
                 <dt>Metadata</dt>
                 <dd>{{ video._source.master_metadata.width }} x {{ video._source.master_metadata.height }} @ {{ video._source.master_metadata.video_frame_rate }} fps</dd>
+                {% if export_json %}
+                <dt>JSON</dt>
+                <dd><a href="/static/json/{{ video._source.title }}.json">{{ video._source.title }}.json</a></dd>
+                {% endif %}
             </dl>
             <h3><a href="#transcriptions">Audio transcriptions</a>, <a href="#descriptions">audio descriptions</a>, <a href="#images">image captions</a></h3>
             <h3>Tags</h3>
