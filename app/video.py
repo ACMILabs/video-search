@@ -16,6 +16,7 @@ ELASTICSEARCH_HOST = os.getenv('ELASTICSEARCH_HOST', 'http://video-search:9200')
 ELASTICSEARCH_CLOUD_ID = os.getenv('ELASTICSEARCH_CLOUD_ID')
 ELASTICSEARCH_API_KEY = os.getenv('ELASTICSEARCH_API_KEY')
 ELASTICSEARCH_INDEX_NAME = os.getenv('ELASTICSEARCH_INDEX_NAME', None)
+PORT = int(os.getenv('PORT', '8081'))
 
 application = Flask(__name__)
 application.config['TEMPLATES_AUTO_RELOAD'] = DEBUG
@@ -275,6 +276,6 @@ class XOSAPI():  # pylint: disable=too-few-public-methods
 if __name__ == '__main__':
     application.run(
         host='0.0.0.0',
-        port=8081,
+        port=PORT,
         debug=DEBUG,
     )
