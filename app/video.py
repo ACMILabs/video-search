@@ -19,6 +19,7 @@ ELASTICSEARCH_API_KEY = os.getenv('ELASTICSEARCH_API_KEY')
 ELASTICSEARCH_INDEX_NAME = os.getenv('ELASTICSEARCH_INDEX_NAME', None)
 PORT = int(os.getenv('PORT', '8081'))
 EXPORT_VIDEO_JSON = os.getenv('EXPORT_VIDEO_JSON', 'false').lower() == 'true'
+REMOVE_QUERY_PARAMS = os.getenv('REMOVE_QUERY_PARAMS', 'false').lower() == 'true'
 
 application = Flask(__name__)
 application.config['TEMPLATES_AUTO_RELOAD'] = DEBUG
@@ -170,7 +171,7 @@ class Search():
             body={'query': {'match_phrase': {'id': video_id}}}
         )['hits']['hits'][0]
 
-    def index(self, resource, json_data, export=EXPORT_VIDEO_JSON):
+    def index(self, resource, json_data):
         """
         Update the search index for a single record.
         """
@@ -182,7 +183,20 @@ class Search():
             tags_dictionary[tag[0]] = tag[1]
         json_data['tags'] = json.dumps(tags_dictionary)
 
-        if export:
+        if REMOVE_QUERY_PARAMS:
+            # Remove the query params from resource URLs if they're in a public S3 bucket
+            if json_data.get('resource'):
+                json_data['resource'] = json_data['resource'].split('?')[0]
+            if json_data.get('web_resource'):
+                json_data['web_resource'] = json_data['web_resource'].split('?')[0]
+            if json_data.get('subtitles'):
+                json_data['subtitles'] = json_data['subtitles'].split('?')[0]
+            if json_data.get('subtitles_vtt'):
+                json_data['subtitles_vtt'] = json_data['subtitles_vtt'].split('?')[0]
+            if json_data.get('snapshot'):
+                json_data['snapshot'] = json_data['snapshot'].split('?')[0]
+
+        if EXPORT_VIDEO_JSON:
             self.export_video_json(json_data)
 
         try:
