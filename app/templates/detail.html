@@ -46,6 +46,7 @@
             <a name="transcriptions"></a>
             <h3>Audio transcriptions</h3>
             <dl class="segments">
+            {% if video._source.transcription != None %}
                 {% for segment in video._source.transcription.segments %}
                 <div class="segment">
                     {% if query|lower in segment.text|lower %}
@@ -62,10 +63,12 @@
                     {% endif %}
                 </div>
                 {% endfor %}
+            {% endif %}
             </dl>
             <a name="descriptions"></a>
             <h3>Audio descriptions (<a href="#top">top</a>)</h3>
             <dl class="segments">
+            {% if video._source.classification != None %}
                 {% for segment in video._source.classification.captions.clap %}
                 <div class="segment">
                     {% if query|lower in segment.predictions.0.prediction|lower %}
@@ -82,10 +85,12 @@
                     {% endif %}
                 </div>
                 {% endfor %}
+            {% endif %}
             </dl>
             <a name="images"></a>
             <h3>Image captions (<a href="#top">top</a>)</h3>
             <dl class="segments">
+            {% if video._source.classification != None %}
                 {% for segment in video._source.classification.captions.huggingface %}
                 <div class="segment">
                     {% if query|lower in segment.predictions.0.prediction|lower %}
@@ -102,6 +107,7 @@
                     {% endif %}
                 </div>
                 {% endfor %}
+            {% endif %}
             </dl>
         </div>
     </div>
