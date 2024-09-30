@@ -1,3 +1,11 @@
+@font-face {
+    font-family: 'Open Sans';
+    src: url('../fonts/OpenSans-VariableFont_wdth\,wght.ttf') format('woff2-variations');
+    src: url('../fonts/OpenSans-VariableFont_wdth\,wght.ttf') format('woff2') tech('variations');
+    font-weight: 100 1000;
+    font-stretch: 25% 151%;
+}
+
 a {
     color: inherit;
     text-decoration: none;
@@ -9,6 +17,8 @@ a:hover {
 
 body {
     text-align: center;
+    font-family: 'Open Sans';
+    font-weight: 200;
 }
 
 dt, dd {
@@ -25,8 +35,51 @@ dd {
     margin-bottom: 1rem;
 }
 
+footer {
+    margin-top: 4rem;
+}
+
+footer img {
+    opacity: 0.6;
+    max-width: 8rem;
+    margin: 1rem;
+}
+
+header {
+    margin-bottom: 2rem;
+}
+
+header img {
+    opacity: 0.6;
+    max-width: 10rem;
+    margin-bottom: 1rem;
+}
+
+img:hover {
+    opacity: 1;
+}
+
+input, select {
+    font-size: 1.5rem;
+}
+
+h1, h2, h3, h4, strong {
+    font-stretch: 95%;
+    font-weight: 600;
+}
+
+h1 {
+    font-stretch: 85%;
+}
+
 h3 {
     word-wrap: break-word;
+}
+
+select {
+    position: relative;
+    top: -0.3rem;
+    left: 1rem;
 }
 
 video {
@@ -59,13 +112,24 @@ video {
 
 .result {
     border: 1px solid lightgrey;
-    padding: 1rem;
+    padding: 0rem;
     margin: 1rem;
     width: 20%;
-    height: 32rem;
+    height: 33rem;
     display: inline-block;
     overflow-y: hidden;
     text-align: left;
+}
+
+.result h3 {
+    margin-top: 0.5rem;
+}
+
+.result h3,
+.result p, 
+.result dl {
+    padding-left: 1rem;
+    padding-right: 1rem;
 }
 
 .segments {
@@ -86,6 +150,10 @@ video {
 
 @media only screen and (max-width: 480px) {
     .result {
-        width: 80%;
+        width: 90%;
+    }
+    select {
+        left: inherit;
+        margin: 1rem;
     }
 }

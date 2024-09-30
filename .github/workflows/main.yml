@@ -58,7 +58,7 @@ jobs:
       uses: andymckay/cancel-action@0.2
 
   build-video-latest:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/add/3-slq-styling'
     needs: [build-and-test-python]
     runs-on: ubuntu-latest
 
@@ -89,7 +89,7 @@ jobs:
 
   deploy:
     needs: [build-and-test-python, build-video-latest]
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/add/3-slq-styling'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3

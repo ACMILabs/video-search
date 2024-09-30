@@ -9,6 +9,11 @@
     <script src="{{ url_for('static', filename='js/index.js') }}"></script>
 </head>
 <body>
+    <header>
+        <a href="https://www.slq.qld.gov.au"><img src="{{ url_for('static', filename='images/slq-logo.svg') }}" alt="State Library of Queensland" title="State Library of Queensland"></a>
+        <h1><a href="/">Video search</a></h1>
+    </header>
+
     <div class="container">
         <video
             id="video-{{ video._id }}"

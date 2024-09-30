@@ -4,12 +4,15 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ACMI Video search</title>
+    <title>State Library of Queensland video collection search</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/index.css') }}">
     <script src="{{ url_for('static', filename='js/index.js') }}"></script>
 </head>
 <body>
-    <h1><a href="/">Video search</a></h1>
+    <header>
+        <a href="https://www.slq.qld.gov.au"><img src="{{ url_for('static', filename='images/slq-logo.svg') }}" alt="State Library of Queensland" title="State Library of Queensland"></a>
+        <h1><a href="/">Video search</a></h1>
+    </header>
 
     <form action="/" method="get">
         <input name="query" type="text" placeholder="Search terms" value="{% if query%}{{ query }}{% else %}{% endif %}" autofocus>
@@ -110,6 +113,11 @@
         <p>Have you indexed any videos?</p>
         <p>{{ errors }}</p>
     {% endif %}
+
+    <footer>
+        <a href="https://www.qld.gov.au"><img src="{{ url_for('static', filename='images/qld-government-logo.svg') }}" alt="Queensland Government" title="Queensland Government"></a>
+        <a href="https://www.acmi.net.au"><img src="{{ url_for('static', filename='images/acmi-logo.svg') }}" alt="ACMI - Australian Centre for the Moving Image" title="ACMI - Australian Centre for the Moving Image"></a>
+    </footer>
 
 </body>
 </html>
