@@ -11,7 +11,6 @@
 <body>
     <header>
         <a href="https://www.slq.qld.gov.au"><img src="{{ url_for('static', filename='images/slq-logo.svg') }}" alt="State Library of Queensland" title="State Library of Queensland"></a>
-        <h1><a href="/">Video search</a></h1>
     </header>
 
     <div class="container">
@@ -27,7 +26,7 @@
         </video>
         <div class="video">
             <a name="top"></a>
-            <h2><a href="/videos/{{ video._source.id }}/">{{ video._source.title }}</a></h2>
+            <h2>{{ video._source.title }}</h2>
             <dl class="metadata">
                 <dt>Duration</dt>
                 <dd>{{ video._source.master_metadata.duration_hms }}</dd>
@@ -41,7 +40,7 @@
             <h3><a href="#transcriptions">Audio transcriptions</a>, <a href="#descriptions">audio descriptions</a>, <a href="#images">image captions</a></h3>
             <h3>Tags</h3>
             <p>
-                {{ video._source.tags|tags_to_string }}
+                {{ video._source.tags|tags_to_string or "No audio transcription tags" }}
             </p>
             <a name="transcriptions"></a>
             <h3>Audio transcriptions</h3>
@@ -63,12 +62,14 @@
                     {% endif %}
                 </div>
                 {% endfor %}
+            {% else %}
+                <div class="segment">No audio transcriptions</div>
             {% endif %}
             </dl>
             <a name="descriptions"></a>
             <h3>Audio descriptions (<a href="#top">top</a>)</h3>
             <dl class="segments">
-            {% if video._source.classification != None %}
+            {% if video._source.classification != None and video._source.classification.captions.clap %}
                 {% for segment in video._source.classification.captions.clap %}
                 <div class="segment">
                     {% if query|lower in segment.predictions.0.prediction|lower %}
@@ -85,12 +86,14 @@
                     {% endif %}
                 </div>
                 {% endfor %}
+            {% else %}
+                <div class="segment">No audio descriptions</div>
             {% endif %}
             </dl>
             <a name="images"></a>
             <h3>Image captions (<a href="#top">top</a>)</h3>
             <dl class="segments">
-            {% if video._source.classification != None %}
+            {% if video._source.classification != None and video._source.classification.captions.huggingface %}
                 {% for segment in video._source.classification.captions.huggingface %}
                 <div class="segment">
                     {% if query|lower in segment.predictions.0.prediction|lower %}
@@ -107,8 +110,15 @@
                     {% endif %}
                 </div>
                 {% endfor %}
+            {% else %}
+                <div class="segment">No image captions</div>
             {% endif %}
             </dl>
+
+            <footer>
+                <a href="https://www.qld.gov.au"><img src="{{ url_for('static', filename='images/qld-government-logo.svg') }}" alt="Queensland Government" title="Queensland Government"></a>
+                <a href="https://www.acmi.net.au"><img src="{{ url_for('static', filename='images/acmi-logo.svg') }}" alt="ACMI - Australian Centre for the Moving Image" title="ACMI - Australian Centre for the Moving Image"></a>
+            </footer>
         </div>
     </div>
 
