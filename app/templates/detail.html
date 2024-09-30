@@ -36,7 +36,7 @@
             <h3><a href="#transcriptions">Audio transcriptions</a>, <a href="#descriptions">audio descriptions</a>, <a href="#images">image captions</a></h3>
             <h3>Tags</h3>
             <p>
-                {{ video._source.tags|tags_to_string }}
+                {{ video._source.tags|tags_to_string or "No audio transcription tags" }}
             </p>
             <a name="transcriptions"></a>
             <h3>Audio transcriptions</h3>
@@ -58,6 +58,8 @@
                     {% endif %}
                 </div>
                 {% endfor %}
+            {% else %}
+                <div class="segment">No audio transcriptions</div>
             {% endif %}
             </dl>
             <a name="descriptions"></a>
@@ -80,6 +82,8 @@
                     {% endif %}
                 </div>
                 {% endfor %}
+            {% else %}
+                <div class="segment">No audio descriptions</div>
             {% endif %}
             </dl>
             <a name="images"></a>
@@ -102,6 +106,8 @@
                     {% endif %}
                 </div>
                 {% endfor %}
+            {% else %}
+                <div class="segment">No image captions</div>
             {% endif %}
             </dl>
         </div>
