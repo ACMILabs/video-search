@@ -65,7 +65,7 @@
             <a name="descriptions"></a>
             <h3>Audio descriptions (<a href="#top">top</a>)</h3>
             <dl class="segments">
-            {% if video._source.classification != None %}
+            {% if video._source.classification != None and video._source.classification.captions.clap %}
                 {% for segment in video._source.classification.captions.clap %}
                 <div class="segment">
                     {% if query|lower in segment.predictions.0.prediction|lower %}
@@ -89,7 +89,7 @@
             <a name="images"></a>
             <h3>Image captions (<a href="#top">top</a>)</h3>
             <dl class="segments">
-            {% if video._source.classification != None %}
+            {% if video._source.classification != None and video._source.classification.captions.huggingface %}
                 {% for segment in video._source.classification.captions.huggingface %}
                 <div class="segment">
                     {% if query|lower in segment.predictions.0.prediction|lower %}
