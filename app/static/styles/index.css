@@ -79,8 +79,11 @@ h3 {
 
 select {
     position: relative;
-    top: -0.3rem;
     left: 1rem;
+}
+
+select.macos-safari {
+    top: -0.3rem;
 }
 
 video {
@@ -102,6 +105,11 @@ video {
     text-align: left;
     overflow-y: scroll;
     height: 48vh;
+}
+
+.information {
+    max-width: 40rem;
+    margin: 4rem auto 2rem auto;
 }
 
 .metadata dt {
