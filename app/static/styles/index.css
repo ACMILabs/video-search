@@ -42,7 +42,8 @@ footer {
 
 footer img {
     opacity: 0.6;
-    max-width: 8rem;
+    max-width: 14rem;
+    max-height: 2rem;
     margin: 1rem;
 }
 
@@ -60,8 +61,32 @@ img:hover {
     opacity: 1;
 }
 
-input, select {
+button:hover {
+    opacity: 0.8;
+    poin
+}
+
+button:active {
+    color: black;
+    background-color: darkgray;
+}
+
+input {
+    max-width: 50vw;
+}
+
+input, select, button {
+    color: black;
     font-size: 1.5rem;
+    padding: 0.5rem;
+    border: 1px solid black;
+    border-radius: 0;
+    margin: 0.5rem 0rem;
+}
+
+button {
+    color: white;
+    background-color: black;
 }
 
 h1, h2, h3, h4, strong {
@@ -75,15 +100,6 @@ h1 {
 
 h3 {
     word-wrap: break-word;
-}
-
-select {
-    position: relative;
-    left: 1rem;
-}
-
-select.macos-safari {
-    top: -0.3rem;
 }
 
 video {
@@ -108,6 +124,7 @@ video {
 }
 
 .information {
+    width: 90vw;
     max-width: 40rem;
     margin: 4rem auto 2rem auto;
 }
@@ -148,6 +165,24 @@ video {
     height: auto;
 }
 
+.slq {
+    padding-bottom: 0.5rem;
+    margin-bottom: 5rem;
+    border-bottom: 1px solid lightgray;
+}
+
+.slq-title {
+    text-transform: uppercase;
+    font-weight: 400;
+    font-size: 1.2rem;
+    letter-spacing: 0.12rem;
+}
+
+.slq-title:hover, h1 a:hover {
+    text-decoration: none;
+    opacity: 0.6;
+}
+
 @media only screen and (max-width: 768px) {
     .result {
         width: 30%;
@@ -160,6 +195,6 @@ video {
     }
     select {
         left: inherit;
-        margin: 1rem;
+        margin: 0.5rem;
     }
 }

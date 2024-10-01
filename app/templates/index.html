@@ -10,12 +10,14 @@
 </head>
 <body>
     <header>
-        <a href="https://www.slq.qld.gov.au"><img src="{{ url_for('static', filename='images/slq-logo.svg') }}" alt="State Library of Queensland" title="State Library of Queensland"></a>
+        <div class="slq">
+            <a href="https://www.slq.qld.gov.au" class="slq-title">State Library of Queensland</a>
+        </div>
         <h1><a href="/">Video search</a></h1>
     </header>
 
     <form action="/" method="get">
-        <input name="query" type="text" placeholder="Search terms" value="{% if query%}{{ query }}{% else %}{% endif %}" autofocus>
+        <input name="query" type="text" placeholder="Search terms" value="{% if query%}{{ query }}{% else %}{% endif %}" autofocus><button>Search</button><br />
         <select name="searchType" id="searchType" onchange="this.form.submit()">
             <option value="audio" {% if search_type == "audio" %}selected{% endif %}>Audio transcription</option>
             <option value="audioDescription" {% if search_type == "audioDescription" %}selected{% endif %}>Audio description</option>
@@ -111,7 +113,7 @@
         </div>
     {% else %}
         <div class="information">
-            <p>Explore the State Library of Queensland's video collection by searching for keywords that appear inside the videos.</p>
+            <p>Explore State Library of Queensland's video collection by searching for keywords that appear inside the videos.</p>
             <p>Video descriptions, audio transcriptions, and image captions have been generated using AI models such as Whisper, CLAP, BLIP-2, VideoMAE, and YOLOv8. This feature, built by ACMI, allows you to search and discover specific moments in the videos more easily.</p>
         </div>
     {% endif %}
@@ -122,8 +124,8 @@
     {% endif %}
 
     <footer>
-        <a href="https://www.qld.gov.au"><img src="{{ url_for('static', filename='images/qld-government-logo.svg') }}" alt="Queensland Government" title="Queensland Government"></a>
         <a href="https://www.acmi.net.au"><img src="{{ url_for('static', filename='images/acmi-logo.svg') }}" alt="ACMI - Australian Centre for the Moving Image" title="ACMI - Australian Centre for the Moving Image"></a>
+        <a href="https://www.slq.qld.gov.au"><img src="{{ url_for('static', filename='images/slq-and-qld-logo.svg') }}" alt="State Library of Queensland" title="State Library of Queensland"></a>
     </footer>
 
 </body>
