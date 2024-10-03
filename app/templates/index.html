@@ -52,9 +52,9 @@
                 <p><strong>Segments</strong>: </p>
                 {% if search_type == "audio" %}
                 <dl class="segments">
-                    {% for segment in result._source.transcription.segments %}
+                {% for segment in result._source.transcription.segments %}
+                    {% if query|lower in segment.text|lower %}
                     <div class="segment">
-                        {% if query|lower in segment.text|lower %}
                         <dt>
                             <a href="#a" onclick="setPlaybackTime({{ result._id }}, {{ segment.start|int }})">
                                 {{ segment.start|int|seconds_to_timecode }}
@@ -65,15 +65,15 @@
                                 {{ segment.text }}
                             </a>
                         </dd>
-                        {% endif %}
                     </div>
-                    {% endfor %}
+                    {% endif %}
+                {% endfor %}
                 </dl>
                 {% elif search_type == "audioDescription" %}
                 <dl class="segments">
-                    {% for segment in result._source.classification.captions.clap %}
+                {% for segment in result._source.classification.captions.clap %}
+                    {% if query|lower in segment.predictions.0.prediction|lower %}
                     <div class="segment">
-                        {% if query|lower in segment.predictions.0.prediction|lower %}
                         <dt>
                             <a href="#a" onclick="setPlaybackTime({{ result._id }}, {{ segment.timestamp|int }})">
                                 {{ segment.timestamp|int|seconds_to_timecode }}
@@ -84,15 +84,15 @@
                                 {{ segment.predictions.0.prediction }}
                             </a>
                         </dd>
-                        {% endif %}
                     </div>
-                    {% endfor %}
+                    {% endif %}
+                {% endfor %}
                 </dl>
                 {% else %}
                 <dl class="segments">
-                    {% for segment in result._source.classification.captions.huggingface %}
+                {% for segment in result._source.classification.captions.huggingface %}
+                    {% if query|lower in segment.predictions.0.prediction|lower %}
                     <div class="segment">
-                        {% if query|lower in segment.predictions.0.prediction|lower %}
                         <dt>
                             <a href="#a" onclick="setPlaybackTime({{ result._id }}, {{ segment.timestamp|int }})">
                                 {{ segment.timestamp|int|seconds_to_timecode }}
@@ -103,11 +103,11 @@
                                 {{ segment.predictions.0.prediction }}
                             </a>
                         </dd>
-                        {% endif %}
                     </div>
-                    {% endfor %}
+                    {% endif %}
+                {% endfor %}
                 </dl>
-                {% endif %}
+            {% endif %}
             </div>
         {% endfor %}
         </div>

@@ -13,12 +13,18 @@ function setPlaybackTime(videoId, seconds) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  var isSafariMac = /Safari/.test(navigator.userAgent) &&
-                  !/Mobile/.test(navigator.userAgent) &&
-                  /Apple Computer/.test(navigator.vendor);
-
-  const select = document.getElementsByTagName('select')[0];
-  if (isSafariMac && select) {
-    select.classList.add('macos-safari');
+  // Highlight query strings in search results
+  const searchQuery = document.querySelector('input[name="query"]').value.trim().toLowerCase();
+  if (searchQuery) {
+    const segments = document.querySelectorAll('.segment dd');
+    segments.forEach(segment => {
+      const textContent = segment.innerHTML;
+      if (textContent.toLowerCase().includes(searchQuery)) {
+        // Create a regex to match the search query (case-insensitive)
+        const regex = new RegExp(`(${searchQuery})`, 'gi');
+        const highlightedText = textContent.replace(regex, '<span class="highlight">$1</span>');
+        segment.innerHTML = highlightedText;
+      }
+    });
   }
 }, false);

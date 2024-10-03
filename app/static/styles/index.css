@@ -123,6 +123,10 @@ video {
     height: 48vh;
 }
 
+.highlight {
+    background-color: lightgrey;
+}
+
 .information {
     width: 90vw;
     max-width: 40rem;
