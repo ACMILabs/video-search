@@ -1,5 +1,8 @@
 import json
 import os
+import re
+import statistics
+from collections import Counter
 from math import exp, floor
 from pathlib import Path
 
@@ -7,6 +10,8 @@ import elasticsearch
 import requests
 from elasticsearch import Elasticsearch
 from flask import Flask, render_template, request
+
+from app.utils import STOPWORDS
 
 DEBUG = os.getenv('DEBUG', 'false').lower() == 'true'
 XOS_API_ENDPOINT = os.getenv('XOS_API_ENDPOINT', None)
@@ -68,8 +73,8 @@ def video_detail(video_id):
     )
 
 
-@application.template_filter('tags_to_string')
-def tags_to_string(tags):
+@application.template_filter('tags_json_to_string')
+def tags_json_to_string(tags):
     """
     Converts a JSON dictionary of tag data to a formatted string.
     Input: {"music": 69, "frog": 26, "water": 18}
@@ -77,6 +82,16 @@ def tags_to_string(tags):
     """
     tags = json.loads(tags)
     return ', '.join([f'{key} ({tags[key]})' for key in tags.keys() if key])
+
+
+@application.template_filter('tags_list_to_string')
+def tags_list_to_string(tags):
+    """
+    Converts a list of tag data to a formatted string.
+    Input: [("music", 69), ("frog", 26), ("water", 18)]
+    Output: music (69), frog (26), water (18)
+    """
+    return ', '.join([f'{item[0]} ({item[1]})' for item in tags if item])
 
 
 @application.template_filter('seconds_to_timecode')
@@ -107,6 +122,55 @@ def average_log_probability_to_percentage_filter(avg_logprob):
     Converts an average log probability into a percentage.
     """
     return float_to_percentage_filter(exp(avg_logprob))
+
+
+@application.template_filter('calculate_prediction_counts')
+def calculate_prediction_counts_filter(predictions, score=0.0):
+    """
+    Calculate the total occurrences of each prediction for this video.
+
+    Returns:
+        A list of touples of format: [(prediction label, count, average confidence)]
+    """
+    prediction_text = []
+    return_list = []
+    for frame in predictions:
+        if frame.get('predictions'):
+            for prediction in frame.get('predictions'):
+                if prediction['confidence'] > score:
+                    prediction_text.append(prediction['prediction'])
+    most_common = dict(Counter(prediction_text).most_common())
+    for item in most_common.items():
+        scores = []
+        for frame in predictions:
+            if frame.get('predictions'):
+                for prediction in frame.get('predictions'):
+                    if item[0] == prediction['prediction'] and prediction['confidence'] > score:
+                        scores.append(prediction['confidence'])
+        return_list.append((item[0], item[1], round(statistics.mean(scores), 2)))
+    return return_list
+
+
+@application.template_filter('get_common_words_from_text')
+def get_common_words_from_text(text, number=50):
+    """
+    Returns a list of tuples containing the most common word and how many times it appears.
+    """
+    tags = None
+    try:
+        text = str(text)
+        words = [word.lower() for word in text.split(' ')]
+
+        # Remove non-alphabetical characters
+        regex = re.compile('[^a-zA-Z]')
+        words = [regex.sub('', word) for word in words]
+
+        # Filter out stopwords
+        words = list(filter(lambda word: word not in STOPWORDS, words))
+        tags = Counter(words).most_common(number)
+    except TypeError:
+        pass
+    return tags
 
 
 def pad_with_leading_zero(number):

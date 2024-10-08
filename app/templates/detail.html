@@ -40,12 +40,11 @@
                 {% endif %}
             </dl>
             <h3><a href="#transcriptions">Audio transcriptions</a>, <a href="#descriptions">audio descriptions</a>, <a href="#image-captions">image captions</a>, objects (<a href="#image-objects-vit">complex</a>, <a href="#image-objects-yolo">simple</a>), <a href="#actions">actions</a></h3>
-            <h3>Tags</h3>
-            <p>
-                {{ video._source.tags|tags_to_string or "No audio transcription tags" }}
-            </p>
             <a name="transcriptions"></a>
             <h3>Audio transcriptions</h3>
+            <p>
+                {{ video._source.tags|tags_json_to_string or "No audio transcription tags" }}
+            </p>
             <dl class="segments">
             {% if video._source.transcription != None %}
                 {% for segment in video._source.transcription.segments %}
@@ -70,6 +69,9 @@
             </dl>
             <a name="descriptions"></a>
             <h3>Audio descriptions (<a href="#top">top</a>)</h3>
+            <p>
+                {{ video._source.classification.captions.clap|get_common_words_from_text|tags_list_to_string or "No audio description tags" }}
+            </p>
             <dl class="segments">
             {% if video._source.classification != None and video._source.classification.captions.clap %}
                 {% for segment in video._source.classification.captions.clap %}
@@ -94,6 +96,9 @@
             </dl>
             <a name="image-captions"></a>
             <h3>Image captions (<a href="#top">top</a>)</h3>
+            <p>
+                {{ video._source.classification.captions.huggingface|get_common_words_from_text|tags_list_to_string or "No audio description tags" }}
+            </p>
             <dl class="segments">
             {% if video._source.classification != None and video._source.classification.captions.huggingface %}
                 {% for segment in video._source.classification.captions.huggingface %}
@@ -118,6 +123,9 @@
             </dl>
             <a name="image-objects-vit"></a>
             <h3>Image objects using a vision transformer (<a href="#top">top</a>)</h3>
+            <p>
+                {{ video._source.classification.objects.huggingface|get_common_words_from_text|tags_list_to_string or "No audio description tags" }}
+            </p>
             <dl class="segments">
             {% if video._source.classification != None and video._source.classification.objects.huggingface %}
                 {% for segment in video._source.classification.objects.huggingface %}
@@ -140,6 +148,9 @@
             </dl>
             <a name="image-objects-yolo"></a>
             <h3>Image objects using YOLO classification (<a href="#top">top</a>)</h3>
+            <p>
+                {{ video._source.classification.objects.yolo|get_common_words_from_text|tags_list_to_string or "No audio description tags" }}
+            </p>
             <dl class="segments">
             {% if video._source.classification != None and video._source.classification.objects.yolo %}
                 {% for segment in video._source.classification.objects.yolo if segment.predictions %}
@@ -162,6 +173,9 @@
             </dl>
             <a name="actions"></a>
             <h3>Actions (<a href="#top">top</a>)</h3>
+            <p>
+                {{ video._source.classification.actions|get_common_words_from_text|tags_list_to_string or "No audio description tags" }}
+            </p>
             <dl class="segments">
             {% if video._source.classification != None and video._source.classification.actions %}
                 {% for segment in video._source.classification.actions if segment.predictions %}
