@@ -1,6 +1,6 @@
 import json
 import os
-from math import floor
+from math import exp, floor
 from pathlib import Path
 
 import elasticsearch
@@ -91,6 +91,22 @@ def seconds_to_timecode_filter(seconds):
     timecode_minutes = pad_with_leading_zero(timecode_minutes)
     timecode_hours = pad_with_leading_zero(timecode_hours)
     return f'{timecode_hours}:{timecode_minutes}:{timecode_seconds}'
+
+
+@application.template_filter('float_to_percentage')
+def float_to_percentage_filter(confidence):
+    """
+    Converts a confidence level float into a percentage.
+    """
+    return int(confidence * 100)
+
+
+@application.template_filter('average_log_probability_to_percentage')
+def average_log_probability_to_percentage_filter(avg_logprob):
+    """
+    Converts an average log probability into a percentage.
+    """
+    return float_to_percentage_filter(exp(avg_logprob))
 
 
 def pad_with_leading_zero(number):

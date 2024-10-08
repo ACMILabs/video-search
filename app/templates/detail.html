@@ -39,7 +39,7 @@
                 <dd><a href="/static/json/{{ video._source.title }}.json">{{ video._source.title }}.json</a></dd>
                 {% endif %}
             </dl>
-            <h3><a href="#transcriptions">Audio transcriptions</a>, <a href="#descriptions">audio descriptions</a>, <a href="#images">image captions</a></h3>
+            <h3><a href="#transcriptions">Audio transcriptions</a>, <a href="#descriptions">audio descriptions</a>, <a href="#image-captions">image captions</a>, objects (<a href="#image-objects-vit">complex</a>, <a href="#image-objects-yolo">simple</a>), <a href="#actions">actions</a></h3>
             <h3>Tags</h3>
             <p>
                 {{ video._source.tags|tags_to_string or "No audio transcription tags" }}
@@ -58,7 +58,7 @@
                     </dt>
                     <dd>
                         <a href="#a" onclick="setPlaybackTime({{ video._id }}, {{ segment.start|int }})">
-                            {{ segment.text }}
+                            {{ segment.text }} ({{ segment.avg_logprob|average_log_probability_to_percentage }}%)
                         </a>
                     </dd>
                     {% endif %}
@@ -92,7 +92,7 @@
                 <div class="segment">No audio descriptions</div>
             {% endif %}
             </dl>
-            <a name="images"></a>
+            <a name="image-captions"></a>
             <h3>Image captions (<a href="#top">top</a>)</h3>
             <dl class="segments">
             {% if video._source.classification != None and video._source.classification.captions.huggingface %}
@@ -116,6 +116,71 @@
                 <div class="segment">No image captions</div>
             {% endif %}
             </dl>
+            <a name="image-objects-vit"></a>
+            <h3>Image objects using a vision transformer (<a href="#top">top</a>)</h3>
+            <dl class="segments">
+            {% if video._source.classification != None and video._source.classification.objects.huggingface %}
+                {% for segment in video._source.classification.objects.huggingface %}
+                <div class="segment">
+                    <dt>
+                        <a href="#a" onclick="setPlaybackTime({{ video._id }}, {{ segment.timestamp|int }})">
+                            {{ segment.timestamp|int|seconds_to_timecode }}
+                        </a>
+                    </dt>
+                    <dd>
+                        <a href="#a" onclick="setPlaybackTime({{ video._id }}, {{ segment.timestamp|int }})">
+                            {{ segment.predictions.0.prediction }} ({{ segment.predictions.0.confidence|float_to_percentage }}%)
+                        </a>
+                    </dd>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="segment">No image objects</div>
+            {% endif %}
+            </dl>
+            <a name="image-objects-yolo"></a>
+            <h3>Image objects using YOLO classification (<a href="#top">top</a>)</h3>
+            <dl class="segments">
+            {% if video._source.classification != None and video._source.classification.objects.yolo %}
+                {% for segment in video._source.classification.objects.yolo if segment.predictions %}
+                <div class="segment">
+                    <dt>
+                        <a href="#a" onclick="setPlaybackTime({{ video._id }}, {{ segment.timestamp|int }})">
+                            {{ segment.timestamp|int|seconds_to_timecode }}
+                        </a>
+                    </dt>
+                    <dd>
+                        <a href="#a" onclick="setPlaybackTime({{ video._id }}, {{ segment.timestamp|int }})">
+                            {{ segment.predictions.0.prediction }} ({{ segment.predictions.0.confidence|float_to_percentage }}%)
+                        </a>
+                    </dd>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="segment">No image objects</div>
+            {% endif %}
+            </dl>
+            <a name="actions"></a>
+            <h3>Actions (<a href="#top">top</a>)</h3>
+            <dl class="segments">
+            {% if video._source.classification != None and video._source.classification.actions %}
+                {% for segment in video._source.classification.actions if segment.predictions %}
+                <div class="segment">
+                    <dt>
+                        <a href="#a" onclick="setPlaybackTime({{ video._id }}, {{ segment.timestamp|int }})">
+                            {{ segment.timestamp|int|seconds_to_timecode }}
+                        </a>
+                    </dt>
+                    <dd>
+                        <a href="#a" onclick="setPlaybackTime({{ video._id }}, {{ segment.timestamp|int }})">
+                            {{ segment.predictions.0.prediction }} ({{ segment.predictions.0.confidence|float_to_percentage }}%)
+                        </a>
+                    </dd>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="segment">No image objects</div>
+            {% endif %}
 
             <footer>
                 <a href="https://www.acmi.net.au"><img src="{{ url_for('static', filename='images/acmi-logo.svg') }}" alt="ACMI - Australian Centre for the Moving Image" title="ACMI - Australian Centre for the Moving Image"></a>
