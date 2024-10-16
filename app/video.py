@@ -44,6 +44,8 @@ def home():
     search_type = request.args.get('searchType', 'audio')
 
     if query:
+        query = sanitise_string(query)
+        args['query'] = query
         search = Search()
         results, errors = search.search(args)
 
@@ -181,6 +183,14 @@ def pad_with_leading_zero(number):
     if len(str(padded_number)) == 1:
         padded_number = f'0{padded_number}'
     return padded_number
+
+
+def sanitise_string(input_string):
+    """
+    Replace any character that is not a-z, 0-9, or ' with an empty string.
+    """
+    sanitized_string = re.sub(r"[^a-z0-9,' ]", '', input_string.lower())
+    return sanitized_string
 
 
 class Search():
