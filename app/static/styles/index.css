@@ -128,9 +128,10 @@ video {
 }
 
 a.example {
-    border-radius: 2rem;
+    border-radius: 0.5rem;
     background-color: lightgrey;
     padding: 0.3rem 0.5rem;
+    margin: 0.1rem;
     text-decoration: none;
 }
 
