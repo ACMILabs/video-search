@@ -25,6 +25,7 @@ ELASTICSEARCH_INDEX_NAME = os.getenv('ELASTICSEARCH_INDEX_NAME', None)
 PORT = int(os.getenv('PORT', '8081'))
 EXPORT_VIDEO_JSON = os.getenv('EXPORT_VIDEO_JSON', 'false').lower() == 'true'
 REMOVE_QUERY_PARAMS = os.getenv('REMOVE_QUERY_PARAMS', 'false').lower() == 'true'
+EXAMPLES = os.getenv('EXAMPLES', None)
 
 application = Flask(__name__)
 application.config['TEMPLATES_AUTO_RELOAD'] = DEBUG
@@ -37,6 +38,7 @@ def home():
     """
     results = None
     errors = None
+    examples = EXAMPLES or []
     args = request.args.copy()
     query = request.args.get('query', None)
     size = args.get('size', type=int, default=20)
@@ -49,6 +51,9 @@ def home():
         search = Search()
         results, errors = search.search(args)
 
+    if EXAMPLES:
+        examples = examples.strip().split(',')
+
     return render_template(
         'index.html',
         query=query,
@@ -57,6 +62,7 @@ def home():
         size=size,
         page=page,
         errors=errors,
+        examples=examples,
     )
 
 

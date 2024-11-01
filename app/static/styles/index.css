@@ -123,14 +123,30 @@ video {
     height: 48vh;
 }
 
+.examples {
+    line-height: 3rem;
+}
+
+a.example {
+    border-radius: 2rem;
+    background-color: lightgrey;
+    padding: 0.3rem 0.5rem;
+    text-decoration: none;
+}
+
+a:hover.example {
+    background-color: grey;
+    color: white;
+}
+
 .highlight {
     background-color: lightgrey;
 }
 
-.information {
+.information, .examples {
     width: 90vw;
     max-width: 40rem;
-    margin: 4rem auto 2rem auto;
+    margin: 2rem auto;
 }
 
 .metadata dt {
