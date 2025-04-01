@@ -1,3 +1,11 @@
+@font-face {
+    font-family: 'Open Sans';
+    src: url('../fonts/OpenSans-VariableFont_wdth\,wght.ttf') format('woff2-variations');
+    src: url('../fonts/OpenSans-VariableFont_wdth\,wght.ttf') format('woff2') tech('variations');
+    font-weight: 100 1000;
+    font-stretch: 25% 151%;
+}
+
 a {
     color: inherit;
     text-decoration: none;
@@ -7,17 +15,189 @@ a:hover {
     text-decoration: underline;
 }
 
+body {
+    text-align: center;
+    font-family: 'Open Sans';
+    font-weight: 200;
+}
+
+dt, dd {
+    display: inline-flex;
+}
+
+dt {
+    width: 4.5rem;
+}
+
+dd {
+    margin-inline-start: 0rem;
+    max-width: 70%;
+    margin-bottom: 1rem;
+}
+
+footer {
+    margin-top: 4rem;
+    text-align: center;
+}
+
+footer img {
+    opacity: 0.6;
+    max-width: 14rem;
+    max-height: 2rem;
+    margin: 1rem;
+}
+
+header {
+    margin-bottom: 2rem;
+}
+
+header img {
+    opacity: 0.6;
+    max-width: 10rem;
+    margin-bottom: 1rem;
+}
+
+img:hover {
+    opacity: 1;
+}
+
+button:hover {
+    opacity: 0.8;
+    poin
+}
+
+button:active {
+    color: black;
+    background-color: darkgray;
+}
+
+input {
+    max-width: 50vw;
+}
+
+input, select, button {
+    color: black;
+    font-size: 1.5rem;
+    padding: 0.5rem;
+    border: 1px solid black;
+    border-radius: 0;
+    margin: 0.5rem 0rem;
+}
+
+button {
+    color: white;
+    background-color: black;
+}
+
+h1, h2, h3, h4, strong {
+    font-stretch: 95%;
+    font-weight: 600;
+}
+
+h1 {
+    font-stretch: 85%;
+}
+
+h3 {
+    word-wrap: break-word;
+}
+
+video {
+    height: 14rem;
+    background-color: black;
+}
+
+.container {
+    display: block;
+}
+
+.video-detail {
+    height: 40vh;
+}
+
+.container .video {
+    max-width: 50rem;
+    margin: 0 auto;
+    text-align: left;
+    overflow-y: scroll;
+    height: 55vh;
+}
+
+.examples {
+    line-height: 3rem;
+}
+
+a.example {
+    border-radius: 0.5rem;
+    background-color: lightgrey;
+    padding: 0.3rem 0.5rem;
+    margin: 0.1rem;
+    text-decoration: none;
+}
+
+a:hover.example {
+    background-color: grey;
+    color: white;
+}
+
+.highlight {
+    background-color: lightgrey;
+}
+
+.information, .examples {
+    width: 90vw;
+    max-width: 40rem;
+    margin: 2rem auto;
+}
+
+.metadata dt {
+    width: 20%;
+}
+
+.metadata dd {
+    width: 70%;
+}
+
 .result {
     border: 1px solid lightgrey;
-    padding: 1rem;
+    padding: 0rem;
     margin: 1rem;
     width: 20%;
-    height: 32rem;
-    float: left;
+    height: 34rem;
+    display: inline-block;
     overflow-y: hidden;
+    text-align: left;
+}
+
+.result h3,
+.result p, 
+.result dl {
+    padding-left: 1rem;
+    padding-right: 1rem;
 }
 
 .segments {
-    height: 10rem;
+    height: 13rem;
     overflow-y: scroll;
+    text-align: left;
+}
+
+.video .segments {
+    height: auto;
+}
+
+@media only screen and (max-width: 768px) {
+    .result {
+        width: 30%;
+    }
+}
+
+@media only screen and (max-width: 480px) {
+    .result {
+        width: 90%;
+    }
+    select {
+        left: inherit;
+        margin: 0.5rem;
+    }
 }

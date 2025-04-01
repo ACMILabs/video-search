@@ -4,20 +4,34 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ACMI Video search</title>
+    <title>ACMI video collection search</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/index.css') }}">
     <script src="{{ url_for('static', filename='js/index.js') }}"></script>
 </head>
 <body>
-    <h1><a href="/">Video search</a></h1>
-    <h2>Enter the words you'd like to search...</h2>
+    <header>
+        <h1><a href="/">Video search</a></h1>
+    </header>
 
     <form action="/" method="get">
-        <input name="query" type="text" placeholder="Search terms" value="{% if query%}{{ query }}{% else %}{% endif %}" autofocus>
+        <input name="query" type="text" placeholder="Search terms" value="{% if query%}{{ query }}{% else %}{% endif %}" autofocus><button>Search</button><br />
+        <select name="searchType" id="searchType" onchange="this.form.submit()">
+            <option value="audio" {% if search_type == "audio" %}selected{% endif %}>Audio transcription</option>
+            <option value="audioDescription" {% if search_type == "audioDescription" %}selected{% endif %}>Audio description</option>
+            <option value="image" {% if search_type == "image" %}selected{% endif %}>Image frame content</option>
+        </select>
     </form>
 
-    {% if query %}
+    {% if query and results %}
         <h3>Results: {{ results.hits.total.value }}</h3>
+        {% if results.hits.total.value > size %}
+        <p>
+            {% if page > 1 %}<a href="/?query={{ request.args.query }}&searchType={{ request.args.searchType }}&size={{ size }}&page={{ page - 1 }}">Previous</a>{% endif %}
+            {% if page > 1 %}- page {{ page }} -{% endif %}
+            {% if page < (results.hits.total.value / size) %}<a href="/?query={{ request.args.query }}&searchType={{ request.args.searchType }}&size={{ size }}&page={{ page + 1 }}">Next</a>{% endif %}
+        </p>
+        {% endif %}
+        <div class="container">
         {% for result in results.hits.hits %}
             <div class="result">
                 <video
@@ -27,28 +41,95 @@
                     controls
                     width="100%"
                     preload="none"
+                    webkit-playsinline
+                    playsinline
                 >
                 </video>
-                <p><strong>ID</strong>: {{ result._id }}</p>
-                <p><strong>Score</strong>: {{ result._score }}</p>
-                <p><strong>Title</strong>: {{ result._source.title }}</p>
+                <h3><a href="/videos/{{ result._source.id }}/">{{ result._source.title }}</a></h3>
                 <p><strong>Segments</strong>: </p>
-                <div class="segments">
-                    {% for segment in result._source.transcription.segments %}
-                        {% if query|lower in segment.text|lower %}
-                            <p>
-                                <a href="#a" onclick="setPlaybackTime({{ result._id }}, {{ segment.start|int }})">
-                                    {{ segment.start|int|seconds_to_timecode }}
-                                </a> - <a href="#a" onclick="setPlaybackTime({{ result._id }}, {{ segment.start|int }})">
-                                    {{ segment.text }}
-                                </a>
-                            </p>
-                        {% endif %}
-                    {% endfor %}
-                </div>
+                {% if search_type == "audio" %}
+                <dl class="segments">
+                {% for segment in result._source.transcription.segments %}
+                    {% if query|lower in segment.text|lower %}
+                    <div class="segment">
+                        <dt>
+                            <a href="#a" onclick="setPlaybackTime({{ result._id }}, {{ segment.start|int }})">
+                                {{ segment.start|int|seconds_to_timecode }}
+                            </a>
+                        </dt>
+                        <dd>
+                            <a href="#a" onclick="setPlaybackTime({{ result._id }}, {{ segment.start|int }})">
+                                {{ segment.text }}
+                            </a>
+                        </dd>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+                </dl>
+                {% elif search_type == "audioDescription" %}
+                <dl class="segments">
+                {% for segment in result._source.classification.captions.clap %}
+                    {% if query|lower in segment.predictions.0.prediction|lower %}
+                    <div class="segment">
+                        <dt>
+                            <a href="#a" onclick="setPlaybackTime({{ result._id }}, {{ segment.timestamp|int }})">
+                                {{ segment.timestamp|int|seconds_to_timecode }}
+                            </a>
+                        </dt>
+                        <dd>
+                            <a href="#a" onclick="setPlaybackTime({{ result._id }}, {{ segment.timestamp|int }})">
+                                {{ segment.predictions.0.prediction }}
+                            </a>
+                        </dd>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+                </dl>
+                {% else %}
+                <dl class="segments">
+                {% for segment in result._source.classification.captions.huggingface %}
+                    {% if query|lower in segment.predictions.0.prediction|lower %}
+                    <div class="segment">
+                        <dt>
+                            <a href="#a" onclick="setPlaybackTime({{ result._id }}, {{ segment.timestamp|int }})">
+                                {{ segment.timestamp|int|seconds_to_timecode }}
+                            </a>
+                        </dt>
+                        <dd>
+                            <a href="#a" onclick="setPlaybackTime({{ result._id }}, {{ segment.timestamp|int }})">
+                                {{ segment.predictions.0.prediction }}
+                            </a>
+                        </dd>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+                </dl>
+            {% endif %}
             </div>
         {% endfor %}
+        </div>
+    {% else %}
+        <div class="examples">
+            <p>
+                {% for example in examples %}
+                    <a href="/?query={{ example }}" class="example">{{ example }}</a>
+                {% endfor %}
+            </p>
+        </div>
+        <div class="information">
+            <p>Explore the ACMI video collection by searching for keywords that appear inside the videos.</p>
+            <p>Video descriptions, audio transcriptions, and image captions have been generated using AI models such as Whisper, CLAP, BLIP-2, VideoMAE, and YOLOv8. This feature allows you to search and discover specific moments in the videos more easily.</p>
+        </div>
     {% endif %}
+    {% if errors %}
+        <h3>Error</h3>
+        <p>Have you indexed any videos?</p>
+        <p>{{ errors }}</p>
+    {% endif %}
+
+    <footer>
+        <a href="https://www.acmi.net.au"><img src="{{ url_for('static', filename='images/acmi-logo.svg') }}" alt="ACMI - Australian Centre for the Moving Image" title="ACMI - Australian Centre for the Moving Image"></a>
+    </footer>
 
 </body>
 </html>

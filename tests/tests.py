@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from app.video import application
+from app.video import application, sanitise_string
 
 mock_search = {
     'hits': {
@@ -27,7 +27,7 @@ mock_search = {
             },
         }],
     },
-}
+}, {}
 
 
 @patch('app.video.Search.search', return_value=mock_search)
@@ -57,3 +57,12 @@ def test_root(_):
         assert 'A video' in response.text
         assert 'A segment' not in response.text
         assert 'three large elephants' not in response.text
+
+
+def test_sanitise_string():
+    """
+    Test sanitising the query string works as expected.
+    """
+    assert sanitise_string('tr?<?"/&ee"\\') == 'tree'
+    assert sanitise_string('hello, there') == 'hello, there'
+    assert sanitise_string("what's that") == "what's that"
