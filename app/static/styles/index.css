@@ -107,6 +107,14 @@ video {
     background-color: black;
 }
 
+label p, label input {
+    display: inline-block;
+}
+
+#supercut {
+    height: 40vh;
+}
+
 .container {
     display: block;
 }

@@ -3,3 +3,4 @@ gunicorn
 pytz
 requests
 elasticsearch
+moviepy

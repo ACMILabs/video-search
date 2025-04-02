@@ -140,3 +140,6 @@ elasticsearch_data
 
 # Exported JSON data
 app/static/json
+
+# Supercuts
+app/static/videos

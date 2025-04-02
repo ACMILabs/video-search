@@ -10,6 +10,7 @@ import elasticsearch
 import requests
 from elasticsearch import Elasticsearch
 from flask import Flask, render_template, request
+from moviepy import VideoFileClip, concatenate_videoclips
 
 from app.utils import STOPWORDS
 
@@ -38,12 +39,14 @@ def home():
     """
     results = None
     errors = None
+    supercut = None
     examples = EXAMPLES or []
     args = request.args.copy()
     query = request.args.get('query', None)
     size = args.get('size', type=int, default=20)
     page = args.get('page', type=int, default=1)
     search_type = request.args.get('searchType', 'audio')
+    supercuts = request.args.get('supercuts', 'off').lower() == 'on'
 
     if query:
         query = sanitise_string(query)
@@ -54,6 +57,9 @@ def home():
     if EXAMPLES:
         examples = examples.strip().split(',')
 
+    if supercuts and results:
+        supercut = generate_supercut(query, results)
+
     return render_template(
         'index.html',
         query=query,
@@ -63,6 +69,8 @@ def home():
         page=page,
         errors=errors,
         examples=examples,
+        supercut=supercut,
+        supercuts=supercuts,
     )
 
 
@@ -197,6 +205,54 @@ def sanitise_string(input_string):
     """
     sanitized_string = re.sub(r"[^a-z0-9,' ]", '', input_string.lower())
     return sanitized_string
+
+
+@application.template_filter('poster')
+def poster_from_video_filter(video_file):
+    """
+    Returns the poster file name from a video file name.
+    """
+    return video_file.replace('.mp4', '.jpg')
+
+
+def generate_supercut(query, search_results):
+    """
+    Create a supercut of all segments containing the search term.
+    """
+    filename = f'supercut_{query}.mp4'
+    output_path = f'app/static/videos/{filename}'
+    if os.path.isfile(output_path):
+        return filename
+    # Get the Film model and prepare clips
+    clips = []
+    for result in search_results['hits']['hits']:
+        video_path = result['_source']['web_resource']
+        for segment in result['_source']['transcription']['segments']:
+            if query.lower() in segment['text'].lower():
+                clip_length = 5.0
+                first_query_word = query.lower().split(' ')[0]
+                for index, word in enumerate(segment['text'].lower().split(' ')):
+                    if word == first_query_word:
+                        clip_length = index + 1
+                        break
+                video = VideoFileClip(video_path)
+                clip = video.subclipped(int(segment['start']), int(segment['start']) + clip_length)
+                clips.append(clip)
+
+    # Concatenate all clips
+    supercut = concatenate_videoclips(clips)
+
+    # Save the supercut
+    Path('app/static/videos').mkdir(exist_ok=True)
+    supercut.write_videofile(output_path, codec='libx264', audio_codec='aac')
+    supercut.save_frame(output_path.replace('.mp4', '.jpg'), t=1.0)
+
+    # Clean up: Close video clips to free memory
+    for clip in clips:
+        clip.close()
+    supercut.close()
+
+    return filename
 
 
 class Search():
