@@ -229,14 +229,8 @@ def generate_supercut(query, search_results):
         video_path = result['_source']['web_resource']
         for segment in result['_source']['transcription']['segments']:
             if query.lower() in segment['text'].lower():
-                clip_length = 5.0
-                first_query_word = query.lower().split(' ')[0]
-                for index, word in enumerate(segment['text'].lower().split(' ')):
-                    if word == first_query_word:
-                        clip_length = index + 1
-                        break
                 video = VideoFileClip(video_path)
-                clip = video.subclipped(int(segment['start']), int(segment['start']) + clip_length)
+                clip = video.subclipped(float(segment['start']), float(segment['end']) + 0.5)
                 clips.append(clip)
 
     # Concatenate all clips
