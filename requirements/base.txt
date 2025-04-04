@@ -3,3 +3,5 @@ gunicorn
 pytz
 requests
 elasticsearch
+moviepy
+python-slugify

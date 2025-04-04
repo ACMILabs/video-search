@@ -20,10 +20,28 @@
             <option value="audioDescription" {% if search_type == "audioDescription" %}selected{% endif %}>Audio description</option>
             <option value="image" {% if search_type == "image" %}selected{% endif %}>Image frame content</option>
         </select>
+        <label for="supercuts">
+            <p>Create a supercut:</p>
+            <input type="checkbox" name="supercuts" id="supercuts" {% if supercuts %}checked{% endif %}>
+        </label>
     </form>
 
     {% if query and results %}
-        <h3>Results: {{ results.hits.total.value }}</h3>
+        {% if supercut %}
+            <h2>Supercut:</h2>
+            <video
+                id="supercut"
+                src="{{ url_for('static', filename='videos/' + supercut) }}"
+                poster="{{ url_for('static', filename='videos/' + supercut|poster) }}"
+                controls
+                width="100%"
+                preload="none"
+                webkit-playsinline
+                playsinline
+            >
+            </video>
+        {% endif %}
+        <h3>Search results: {{ results.hits.total.value }}</h3>
         {% if results.hits.total.value > size %}
         <p>
             {% if page > 1 %}<a href="/?query={{ request.args.query }}&searchType={{ request.args.searchType }}&size={{ size }}&page={{ page - 1 }}">Previous</a>{% endif %}
