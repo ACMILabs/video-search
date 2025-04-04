@@ -14,7 +14,8 @@ import numpy as np
 import requests
 from elasticsearch import Elasticsearch
 from flask import Flask, Response, render_template, request
-from moviepy import VideoFileClip, concatenate_videoclips
+from moviepy import (ColorClip, CompositeVideoClip, VideoFileClip,
+                     concatenate_videoclips)
 from PIL import Image
 from slugify import slugify
 
@@ -282,7 +283,7 @@ def generate_supercut_background(query, search_results, task_id):  # pylint: dis
         for segment in result['_source']['transcription']['segments']
         if query.lower() in segment['text'].lower()
     )
-    total_clips += 1  # save video as well
+    total_clips += 2  # resize, save video as well
     clips = []
     processed_clips = 0
 
@@ -299,11 +300,31 @@ def generate_supercut_background(query, search_results, task_id):  # pylint: dis
                     supercut_tasks[task_id]['progress'] = progress
 
     if clips:
-        supercut = concatenate_videoclips(clips, method='compose')
-        Path('app/static/videos').mkdir(exist_ok=True)
-        supercut.write_videofile(output_path, codec='libx264', audio_codec='aac')
+        target_resolution = (1920, 1080)
+        resized_clips = []
+        for clip in clips:
+            # Resize to fit within target_resolution, preserving aspect ratio
+            resized_clip = clip.resized(height=target_resolution[1])  # Scale based on height
+            if resized_clip.w > target_resolution[0]:  # If too wide, scale based on width instead
+                resized_clip = clip.resized(width=target_resolution[0])
+
+            # Create a colored background clip
+            background = ColorClip(size=target_resolution, color=(0, 0, 0), duration=clip.duration)
+
+            # Center the resized clip on the background
+            padded_clip = CompositeVideoClip([background, resized_clip.with_position("center")])
+            resized_clips.append(padded_clip)
+
         processed_clips += 1
         progress = (processed_clips / total_clips) * 100 if total_clips > 0 else 100
+
+        supercut = concatenate_videoclips(resized_clips, method='compose')
+        Path('app/static/videos').mkdir(exist_ok=True)
+        supercut.write_videofile(output_path, codec='libx264', audio_codec='aac')
+
+        processed_clips += 1
+        progress = (processed_clips / total_clips) * 100 if total_clips > 0 else 100
+
         frame = supercut.get_frame(1.0)
         frame_image = Image.fromarray(np.uint8(frame))
         if frame_image.mode == 'RGBA':
