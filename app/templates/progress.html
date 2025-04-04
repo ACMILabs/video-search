@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Generating Supercut</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/index.css') }}">
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var source = new EventSource('/supercut_progress/{{ task_id }}');
+            source.onmessage = function(event) {
+                if (event.data.startsWith('completed')) {
+                    var filename = event.data.split(' ')[1];
+                    document.getElementById('progress').innerText = 'Supercut generated!';
+                    document.getElementById('supercut').src = '/static/videos/' + filename;
+                    document.getElementById('supercut').poster = '/static/videos/' + filename.replace('.mp4', '.jpg');
+                    document.getElementById('supercut').style.display = 'block';
+                    source.close();
+                } else if (event.data === 'no_clips') {
+                    document.getElementById('progress').innerText = 'No matching clips found.';
+                    source.close();
+                } else {
+                    var progress = parseInt(event.data);
+                    document.getElementById('progress').innerText = 'Progress: ' + progress + '%';
+                }
+            };
+        });
+    </script>
+</head>
+<body>
+    <header>
+        <h1><a href="/">Video search</a></h1>
+    </header>
+    <h2>Generating Supercut for "{{ query }}"</h2>
+    <p id="progress">Progress: 0%</p>
+    <video id="supercut" controls width="100%" style="display:none;" preload="none" webkit-playsinline playsinline></video>
+    <footer>
+        <a href="https://www.acmi.net.au"><img src="{{ url_for('static', filename='images/acmi-logo.svg') }}" alt="ACMI - Australian Centre for the Moving Image" title="ACMI - Australian Centre for the Moving Image"></a>
+    </footer>
+</body>
+</html>

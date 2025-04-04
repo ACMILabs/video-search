@@ -2,6 +2,9 @@ import json
 import os
 import re
 import statistics
+import threading
+import time
+import uuid
 from collections import Counter
 from math import exp, floor
 from pathlib import Path
@@ -9,8 +12,9 @@ from pathlib import Path
 import elasticsearch
 import requests
 from elasticsearch import Elasticsearch
-from flask import Flask, render_template, request
+from flask import Flask, Response, render_template, request
 from moviepy import VideoFileClip, concatenate_videoclips
+from slugify import slugify
 
 from app.utils import STOPWORDS
 
@@ -30,6 +34,10 @@ EXAMPLES = os.getenv('EXAMPLES', None)
 
 application = Flask(__name__)
 application.config['TEMPLATES_AUTO_RELOAD'] = DEBUG
+
+# Global dictionary to track supercut tasks
+supercut_tasks = {}
+lock = threading.Lock()
 
 
 @application.route('/')
@@ -57,8 +65,32 @@ def home():
     if EXAMPLES:
         examples = examples.strip().split(',')
 
-    if supercuts and results:
-        supercut = generate_supercut(query, results)
+    if supercuts and query and results:
+        filename = f'supercut_{slugify(query)}.mp4'
+        output_path = f'app/static/videos/{filename}'
+        if os.path.isfile(output_path):
+            supercut = filename
+        else:
+            # Generate a unique task ID
+            task_id = str(uuid.uuid4())
+            with lock:
+                supercut_tasks[task_id] = {
+                    'status': 'in_progress',
+                    'progress': 0,
+                    'filename': None,
+                }
+            # Start background thread for supercut generation
+            thread = threading.Thread(
+                target=generate_supercut_background,
+                args=(query, results, task_id),
+            )
+            thread.start()
+            # Render progress page
+            return render_template(
+                'progress.html',
+                task_id=task_id,
+                query=query,
+            )
 
     return render_template(
         'index.html',
@@ -87,6 +119,28 @@ def video_detail(video_id):
         video=video,
         export_json=EXPORT_VIDEO_JSON,
     )
+
+
+@application.route('/supercut_progress/<task_id>')
+def supercut_progress(task_id):
+    """
+    Stream progress updates for supercut generation via EventSource.
+    """
+    def generate():
+        while True:
+            with lock:
+                task = supercut_tasks.get(task_id)
+                if task:
+                    if task['status'] == 'in_progress':
+                        yield f"data: {task['progress']}\n\n"
+                    elif task['status'] == 'completed':
+                        if task['filename']:
+                            yield f"data: completed {task['filename']}\n\n"
+                        else:
+                            yield "data: no_clips\n\n"
+                        break
+            time.sleep(1)  # Poll every second
+    return Response(generate(), mimetype='text/event-stream')
 
 
 @application.template_filter('tags_json_to_string')
@@ -215,16 +269,21 @@ def poster_from_video_filter(video_file):
     return video_file.replace('.mp4', '.jpg')
 
 
-def generate_supercut(query, search_results):
+def generate_supercut_background(query, search_results, task_id):
     """
-    Create a supercut of all segments containing the search term.
+    Run supercut generation in a background thread and update task status.
     """
-    filename = f'supercut_{query}.mp4'
+    filename = f'supercut_{slugify(query)}.mp4'
     output_path = f'app/static/videos/{filename}'
-    if os.path.isfile(output_path):
-        return filename
-    # Get the Film model and prepare clips
+    total_clips = sum(
+        1 for result in search_results['hits']['hits']
+        for segment in result['_source']['transcription']['segments']
+        if query.lower() in segment['text'].lower()
+    )
+    total_clips += 1  # save video as well
     clips = []
+    processed_clips = 0
+
     for result in search_results['hits']['hits']:
         video_path = result['_source']['web_resource']
         for segment in result['_source']['transcription']['segments']:
@@ -232,21 +291,35 @@ def generate_supercut(query, search_results):
                 video = VideoFileClip(video_path)
                 clip = video.subclipped(float(segment['start']), float(segment['end']) + 0.5)
                 clips.append(clip)
+                processed_clips += 1
+                progress = (processed_clips / total_clips) * 100 if total_clips > 0 else 100
+                with lock:
+                    supercut_tasks[task_id]['progress'] = progress
 
-    # Concatenate all clips
-    supercut = concatenate_videoclips(clips)
+    if clips:
+        supercut = concatenate_videoclips(clips)
+        Path('app/static/videos').mkdir(exist_ok=True)
+        supercut.write_videofile(output_path, codec='libx264', audio_codec='aac')
+        processed_clips += 1
+        progress = (processed_clips / total_clips) * 100 if total_clips > 0 else 100
+        supercut.save_frame(output_path.replace('.mp4', '.jpg'), t=1.0)
+        for clip in clips:
+            clip.close()
+        supercut.close()
+        with lock:
+            supercut_tasks[task_id]['status'] = 'completed'
+            supercut_tasks[task_id]['filename'] = filename
+    else:
+        with lock:
+            supercut_tasks[task_id]['status'] = 'completed'
+            supercut_tasks[task_id]['filename'] = None
 
-    # Save the supercut
-    Path('app/static/videos').mkdir(exist_ok=True)
-    supercut.write_videofile(output_path, codec='libx264', audio_codec='aac')
-    supercut.save_frame(output_path.replace('.mp4', '.jpg'), t=1.0)
 
-    # Clean up: Close video clips to free memory
-    for clip in clips:
-        clip.close()
-    supercut.close()
-
-    return filename
+def generate_supercut(query, search_results, task_id):
+    """
+    Helper function called by the background thread (not used directly here).
+    """
+    generate_supercut_background(query, search_results, task_id)
 
 
 class Search():
