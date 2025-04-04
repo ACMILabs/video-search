@@ -10,10 +10,12 @@ from math import exp, floor
 from pathlib import Path
 
 import elasticsearch
+import numpy as np
 import requests
 from elasticsearch import Elasticsearch
 from flask import Flask, Response, render_template, request
 from moviepy import VideoFileClip, concatenate_videoclips
+from PIL import Image
 from slugify import slugify
 
 from app.utils import STOPWORDS
@@ -269,7 +271,7 @@ def poster_from_video_filter(video_file):
     return video_file.replace('.mp4', '.jpg')
 
 
-def generate_supercut_background(query, search_results, task_id):
+def generate_supercut_background(query, search_results, task_id):  # pylint: disable=too-many-locals
     """
     Run supercut generation in a background thread and update task status.
     """
@@ -297,12 +299,16 @@ def generate_supercut_background(query, search_results, task_id):
                     supercut_tasks[task_id]['progress'] = progress
 
     if clips:
-        supercut = concatenate_videoclips(clips)
+        supercut = concatenate_videoclips(clips, method='compose')
         Path('app/static/videos').mkdir(exist_ok=True)
         supercut.write_videofile(output_path, codec='libx264', audio_codec='aac')
         processed_clips += 1
         progress = (processed_clips / total_clips) * 100 if total_clips > 0 else 100
-        supercut.save_frame(output_path.replace('.mp4', '.jpg'), t=1.0)
+        frame = supercut.get_frame(1.0)
+        frame_image = Image.fromarray(np.uint8(frame))
+        if frame_image.mode == 'RGBA':
+            frame_image = frame_image.convert('RGB')
+        frame_image.save(output_path.replace('.mp4', '.jpg'), 'JPEG')
         for clip in clips:
             clip.close()
         supercut.close()
