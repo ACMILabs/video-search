@@ -18,6 +18,8 @@
                 } else if (event.data === 'no_clips') {
                     document.getElementById('progress').innerText = 'No matching clips found.';
                     source.close();
+                } else if (event.data.includes('saving')) {
+                    document.getElementById('progress').innerText = 'Saving your supercut...';
                 } else {
                     var progress = parseInt(event.data);
                     document.getElementById('progress').innerText = 'Progress: ' + progress + '%';

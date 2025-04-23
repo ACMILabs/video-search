@@ -137,6 +137,8 @@ def supercut_progress(task_id):
                 if task:
                     if task['status'] == 'in_progress':
                         yield f"data: {task['progress']}\n\n"
+                    elif task['status'] == 'saving':
+                        yield f"data: {task['status']}\n\n"
                     elif task['status'] == 'completed':
                         if task['filename']:
                             yield f"data: completed {task['filename']}\n\n"
@@ -284,7 +286,7 @@ def generate_supercut_background(query, search_results, task_id):  # pylint: dis
         for segment in result['_source']['transcription']['segments']
         if query.lower() in segment['text'].lower()
     )
-    total_clips += 2  # resize, save video as well
+    total_clips += 1  # add resize
     clips = []
     processed_clips = 0
 
@@ -318,6 +320,8 @@ def generate_supercut_background(query, search_results, task_id):  # pylint: dis
 
         processed_clips += 1
         progress = (processed_clips / total_clips) * 100 if total_clips > 0 else 100
+        with lock:
+            supercut_tasks[task_id]['status'] = 'saving'
 
         supercut = concatenate_videoclips(resized_clips, method='compose')
         Path('app/static/videos').mkdir(exist_ok=True)
@@ -329,9 +333,6 @@ def generate_supercut_background(query, search_results, task_id):  # pylint: dis
             bitrate='2000k',
             threads=multiprocessing.cpu_count(),
         )
-
-        processed_clips += 1
-        progress = (processed_clips / total_clips) * 100 if total_clips > 0 else 100
 
         frame = supercut.get_frame(1.0)
         frame_image = Image.fromarray(np.uint8(frame))
