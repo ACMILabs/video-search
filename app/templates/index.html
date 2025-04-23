@@ -14,16 +14,12 @@
     </header>
 
     <form action="/" method="get">
-        <input name="query" type="text" placeholder="Search terms" value="{% if query%}{{ query }}{% else %}{% endif %}" autofocus><button>Search</button><br />
+        <input name="query" type="text" placeholder="Search terms" value="{% if query%}{{ query }}{% else %}{% endif %}" autofocus><button>Search</button>{% if query and results %}<button type="submit" name="supercuts" value="on" class="supercuts">Supercut</button>{% endif %}<br />
         <select name="searchType" id="searchType" onchange="this.form.submit()">
             <option value="audio" {% if search_type == "audio" %}selected{% endif %}>Audio transcription</option>
             <option value="audioDescription" {% if search_type == "audioDescription" %}selected{% endif %}>Audio description</option>
             <option value="image" {% if search_type == "image" %}selected{% endif %}>Image frame content</option>
         </select>
-        <label for="supercuts">
-            <p>Create a supercut:</p>
-            <input type="checkbox" name="supercuts" id="supercuts" {% if supercuts %}checked{% endif %}>
-        </label>
     </form>
 
     {% if query and results %}

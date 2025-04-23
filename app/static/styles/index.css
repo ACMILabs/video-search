@@ -89,6 +89,11 @@ button {
     background-color: black;
 }
 
+button.supercuts {
+    color: black;
+    background-color: gray;
+}
+
 h1, h2, h3, h4, strong {
     font-stretch: 95%;
     font-weight: 600;
