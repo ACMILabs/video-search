@@ -1,4 +1,5 @@
 import json
+import multiprocessing
 import os
 import re
 import statistics
@@ -300,7 +301,7 @@ def generate_supercut_background(query, search_results, task_id):  # pylint: dis
                     supercut_tasks[task_id]['progress'] = progress
 
     if clips:
-        target_resolution = (1920, 1080)
+        target_resolution = (1280, 720)
         resized_clips = []
         for clip in clips:
             # Resize to fit within target_resolution, preserving aspect ratio
@@ -320,7 +321,14 @@ def generate_supercut_background(query, search_results, task_id):  # pylint: dis
 
         supercut = concatenate_videoclips(resized_clips, method='compose')
         Path('app/static/videos').mkdir(exist_ok=True)
-        supercut.write_videofile(output_path, codec='libx264', audio_codec='aac')
+        supercut.write_videofile(
+            output_path,
+            codec='libx264',
+            audio_codec='aac',
+            preset='veryfast',
+            bitrate='2000k',
+            threads=multiprocessing.cpu_count(),
+        )
 
         processed_clips += 1
         progress = (processed_clips / total_clips) * 100 if total_clips > 0 else 100
