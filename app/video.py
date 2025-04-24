@@ -298,8 +298,11 @@ def generate_supercut_background(query, search_results, task_id):  # pylint: dis
                 # Extend clip by 0.5 s on either side, but keep within the video’s bounds
                 start_time = max(float(segment['start']) - 0.5, 0)
                 end_time = min(float(segment['end']) + 0.5, video.duration)
-                clip = video.subclipped(start_time, end_time)
-                clips.append(clip)
+                try:
+                    clip = video.subclipped(start_time, end_time)
+                    clips.append(clip)
+                except ValueError:
+                    pass
                 processed_clips += 1
                 progress = (processed_clips / total_clips) * 100 if total_clips > 0 else 100
                 with lock:
