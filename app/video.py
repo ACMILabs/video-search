@@ -275,7 +275,8 @@ def poster_from_video_filter(video_file):
     return video_file.replace('.mp4', '.jpg')
 
 
-def generate_supercut_background(query, search_results, task_id):  # pylint: disable=too-many-locals
+# pylint: disable=too-many-locals,too-many-statements
+def generate_supercut_background(query, search_results, task_id):
     """
     Run supercut generation in a background thread and update task status.
     """
