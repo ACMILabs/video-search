@@ -358,13 +358,6 @@ def generate_supercut_background(query, search_results, task_id):
             supercut_tasks[task_id]['filename'] = None
 
 
-def generate_supercut(query, search_results, task_id):
-    """
-    Helper function called by the background thread (not used directly here).
-    """
-    generate_supercut_background(query, search_results, task_id)
-
-
 class Search():
     """
     Elasticsearch interface.

@@ -2,29 +2,38 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Generating Supercut</title>
+    <title>Generating a Supercut</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/index.css') }}">
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            var source = new EventSource('/supercut_progress/{{ task_id }}');
-            source.onmessage = function(event) {
-                if (event.data.startsWith('completed')) {
-                    var filename = event.data.split(' ')[1];
-                    document.getElementById('progress').innerText = 'Supercut generated!';
-                    document.getElementById('supercut').src = '/static/videos/' + filename;
-                    document.getElementById('supercut').poster = '/static/videos/' + filename.replace('.mp4', '.jpg');
-                    document.getElementById('supercut').style.display = 'block';
-                    source.close();
-                } else if (event.data === 'no_clips') {
-                    document.getElementById('progress').innerText = 'No matching clips found.';
-                    source.close();
-                } else if (event.data.includes('saving')) {
-                    document.getElementById('progress').innerText = 'Saving your supercut... (this step takes a while)';
-                } else {
-                    var progress = parseInt(event.data);
-                    document.getElementById('progress').innerText = 'Progress: ' + progress + '%';
-                }
-            };
+            let source;
+            function connect() {
+                source = new EventSource('/supercut_progress/{{ task_id }}');
+                source.onmessage = function(event) {
+                    if (event.data.startsWith('completed')) {
+                        var filename = event.data.split(' ')[1];
+                        document.getElementById('progress').innerText = 'Supercut generated!';
+                        document.getElementById('supercut').src = '/static/videos/' + filename;
+                        document.getElementById('supercut').poster = '/static/videos/' + filename.replace('.mp4', '.jpg');
+                        document.getElementById('supercut').style.display = 'block';
+                        source.close();
+                    } else if (event.data === 'no_clips') {
+                        document.getElementById('progress').innerText = 'No matching clips found.';
+                        source.close();
+                    } else if (event.data.includes('saving')) {
+                        document.getElementById('progress').innerText = 'Saving your supercut... (this step takes a while)';
+                    } else {
+                        var progress = parseInt(event.data);
+                        document.getElementById('progress').innerText = 'Progress: ' + progress + '%';
+                    }
+                };
+                source.onerror = function(event) {
+                    if (source.readyState === EventSource.CLOSED) {
+                        setTimeout(connect, 2000);
+                    }
+                };
+            }
+            connect();
         });
     </script>
 </head>
@@ -32,7 +41,7 @@
     <header>
         <h1><a href="/">Video search</a></h1>
     </header>
-    <h2>Generating Supercut for "{{ query }}"</h2>
+    <h2>Generating a Supercut for "{{ query }}"</h2>
     <p id="progress">Progress: 0%</p>
     <video id="supercut" controls width="100%" style="display:none;" preload="none" webkit-playsinline playsinline></video>
     <footer>
