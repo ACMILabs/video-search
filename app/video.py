@@ -69,9 +69,19 @@ def home():
 
     if EXAMPLES:
         examples = examples.strip().split(',')
+    else:
+        # Try getting pre-generated supercuts as examples
+        examples = [
+            stem.split('_')[1]
+            for stem in (
+                p.stem
+                for p in Path('app/static/videos').glob('*.mp4')
+            )
+            if len(stem.split('_')) > 1
+        ]
 
     if supercuts and query and results:
-        filename = f'supercut_{slugify(query)}.mp4'
+        filename = get_filename(query, page)
         output_path = f'app/static/videos/{filename}'
         if os.path.isfile(output_path):
             supercut = filename
@@ -87,7 +97,7 @@ def home():
             # Start background thread for supercut generation
             thread = threading.Thread(
                 target=generate_supercut_background,
-                args=(query, results, task_id),
+                args=(query, results, task_id, page),
             )
             thread.start()
             # Render progress page
@@ -291,12 +301,22 @@ def duration_filter(segment):
     return end_time - start_time
 
 
+def get_filename(query, page):
+    """
+    Returns the filename of a supercut video from a query and page number.
+    """
+    filename = f'supercut_{slugify(query)}'
+    if page and page > 1:
+        filename = f'{filename}_{page}'
+    return f'{filename}.mp4'
+
+
 # pylint: disable=too-many-locals,too-many-statements
-def generate_supercut_background(query, search_results, task_id):
+def generate_supercut_background(query, search_results, task_id, page):
     """
     Run supercut generation in a background thread and update task status.
     """
-    filename = f'supercut_{slugify(query)}.mp4'
+    filename = get_filename(query, page)
     output_path = f'app/static/videos/{filename}'
     total_clips = sum(
         1 for result in search_results['hits']['hits']
