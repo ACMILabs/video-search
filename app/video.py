@@ -17,6 +17,7 @@ from elasticsearch import Elasticsearch
 from flask import Flask, Response, render_template, request
 from moviepy import (ColorClip, CompositeVideoClip, VideoFileClip,
                      concatenate_videoclips)
+from moviepy.audio.fx import AudioFadeIn, AudioFadeOut
 from PIL import Image
 from slugify import slugify
 
@@ -316,6 +317,10 @@ def generate_supercut_background(query, search_results, task_id):
                 end_time = min(float(segment['end']) + 0.5, video.duration)
                 try:
                     clip = video.subclipped(start_time, end_time)
+                    # Fade the audio in and out
+                    fade_in = clip.audio.with_effects([AudioFadeIn(0.5)])
+                    fade_out = fade_in.with_effects([AudioFadeOut(0.5)])
+                    clip = clip.with_audio(fade_out)
                     clips.append(clip)
                 except ValueError:
                     pass
