@@ -72,7 +72,7 @@ def home():
     else:
         # Try getting pre-generated supercuts as examples
         examples = [
-            stem.split('_')[1]
+            stem.split('_')[1].replace('-', ' ')
             for stem in (
                 p.stem
                 for p in Path('app/static/videos').glob('*.mp4')
