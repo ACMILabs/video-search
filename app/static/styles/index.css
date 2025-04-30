@@ -120,6 +120,16 @@ label p, label input {
     height: 40vh;
 }
 
+ol.supercut-credits, ol.supercut-credits li {
+    display: inline-block;
+    list-style: none;
+}
+
+ol.supercut-credits li {
+    margin: 0 1rem;
+    display: none;
+}
+
 .container {
     display: block;
 }

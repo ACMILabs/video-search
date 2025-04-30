@@ -36,6 +36,20 @@
                 playsinline
             >
             </video>
+            <ol class="supercut-credits">
+                {% for result in results.hits.hits %}
+                    {% for segment in result._source.transcription.segments if query|lower in segment.text|lower %}
+                        <li data-duration="{{ segment|duration }}">
+                            {% if result._source.works|length > 0 %}
+                                <a href="https://www.acmi.net.au/works/{{ result._source.works.0.id }}--{{ result._source.works.0.slug }}/" target="_blank">{{ result._source.works.0.title }}</a>
+                            {% else %}
+                                Untitled
+                            {% endif %}
+                            <br />{{ segment.start|int|seconds_to_timecode }} - {{ segment.end|int|seconds_to_timecode }}
+                        </li>
+                    {% endfor %}
+                {% endfor %}
+            </ol>
         {% endif %}
         <h3>Search results: {{ results.hits.total.value }}</h3>
         {% if results.hits.total.value > size %}
@@ -60,6 +74,9 @@
                 >
                 </video>
                 <h3><a href="/videos/{{ result._source.id }}/">{{ result._source.title }}</a></h3>
+                {% if result._source.works|length > 0 %}
+                    <p><a href="https://www.acmi.net.au/works/{{ result._source.works.0.id }}--{{ result._source.works.0.slug }}/" target="_blank">{{ result._source.works.0.title }}</a></p>
+                {% endif %}
                 <p><strong>Segments</strong>: </p>
                 {% if search_type == "audio" %}
                 <dl class="segments">

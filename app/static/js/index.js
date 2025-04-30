@@ -14,8 +14,9 @@ function setPlaybackTime(videoId, seconds) {
 
 document.addEventListener('DOMContentLoaded', function() {
   // Highlight query strings in search results
-  const searchQuery = document.querySelector('input[name="query"]').value.trim().toLowerCase();
+  let searchQuery = document.querySelector('input[name="query"]');
   if (searchQuery) {
+    searchQuery = searchQuery.value.trim().toLowerCase();
     const segments = document.querySelectorAll('.segment dd');
     segments.forEach(segment => {
       const textContent = segment.innerHTML;
@@ -27,4 +28,35 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
+
+  const video   = document.getElementById('supercut');
+  const credits = Array.from(
+    /** @type {NodeListOf<HTMLLIElement>} */
+    document.querySelectorAll('.supercut-credits li')
+  );
+
+  if (!video || credits.length === 0) return;
+
+  /* Turn per-clip durations into absolute start / end */
+  let totalRunningTime = 0;
+  credits.forEach(li => {
+    const duration = parseFloat(li.dataset.duration) || 0;
+    li.dataset.start = totalRunningTime;
+    totalRunningTime += duration;
+    li.dataset.end   = totalRunningTime;
+  });
+
+  /* Show only the credit that matches currentTime */
+  function updateCredits() {
+    const now = video.currentTime;
+    for (const li of credits) {
+      const start = parseFloat(li.dataset.start);
+      const end = parseFloat(li.dataset.end);
+      li.style.display = (now >= start && now < end) ? 'list-item' : 'none';
+    }
+  }
+
+  video.addEventListener('timeupdate',   updateCredits); // normal playback
+  video.addEventListener('seeked',       updateCredits); // user drags scrubber
+  video.addEventListener('loadedmetadata', updateCredits); // initial state
 }, false);

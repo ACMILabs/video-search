@@ -94,6 +94,11 @@ def home():
                 'progress.html',
                 task_id=task_id,
                 query=query,
+                results=results,
+                search_type=search_type,
+                size=size,
+                page=page,
+                errors=errors,
             )
 
     return render_template(
@@ -273,6 +278,16 @@ def poster_from_video_filter(video_file):
     Returns the poster file name from a video file name.
     """
     return video_file.replace('.mp4', '.jpg')
+
+
+@application.template_filter('duration')
+def duration_filter(segment):
+    """
+    Returns the duration of a segment.
+    """
+    start_time = max(float(segment['start']) - 0.4, 0)
+    end_time = float(segment['end']) + 0.4
+    return end_time - start_time
 
 
 # pylint: disable=too-many-locals,too-many-statements
