@@ -296,8 +296,8 @@ def duration_filter(segment):
     """
     Returns the duration of a segment.
     """
-    start_time = max(float(segment['start']) - 0.4, 0)
-    end_time = float(segment['end']) + 0.4
+    start_time = max(float(segment['start']) - 0.5, 0)
+    end_time = float(segment['end']) + 0.5
     return end_time - start_time
 
 
@@ -326,17 +326,20 @@ def generate_supercut_background(query, search_results, task_id, page):
     total_clips += 1  # add resize
     clips = []
     processed_clips = 0
+    video_cache = {}
 
     for result in search_results['hits']['hits']:
         video_path = result['_source']['web_resource']
+        if video_path not in video_cache:
+            video_cache[video_path] = VideoFileClip(video_path)
+        base_clip = video_cache[video_path]
         for segment in result['_source']['transcription']['segments']:
             if query.lower() in segment['text'].lower():
-                video = VideoFileClip(video_path)
                 # Extend clip by 0.5 s on either side, but keep within the video’s bounds
                 start_time = max(float(segment['start']) - 0.5, 0)
-                end_time = min(float(segment['end']) + 0.5, video.duration)
+                end_time = min(float(segment['end']) + 0.5, base_clip.duration)
                 try:
-                    clip = video.subclipped(start_time, end_time)
+                    clip = base_clip.subclipped(start_time, end_time)
                     # Fade the audio in and out
                     fade_in = clip.audio.with_effects([AudioFadeIn(0.5)])
                     fade_out = fade_in.with_effects([AudioFadeOut(0.5)])
