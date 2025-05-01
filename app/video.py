@@ -78,14 +78,14 @@ def home():
         examples = examples.strip().split(',')
     else:
         # Try getting pre-generated supercuts as examples
-        examples = [
+        examples = sorted([
             stem.split('_')[1].replace('-', ' ')
             for stem in (
                 p.stem
                 for p in Path('app/static/videos').glob('*.mp4')
             )
             if len(stem.split('_')) > 1
-        ]
+        ])
 
     if supercuts and query and results:
         filename = get_filename(query, page)
