@@ -14,6 +14,8 @@
     </header>
 
     <form action="/" method="get">
+        <input type="hidden" name="page" value="{{ page }}">
+        <input type="hidden" name="size" value="{{ size }}">
         <input name="query" type="text" placeholder="Search terms" value="{% if query%}{{ query }}{% else %}{% endif %}" autofocus><button>Search</button>{% if query and results %}<button type="submit" name="supercuts" value="on" class="supercuts">Supercut</button>{% endif %}<br />
         <select name="searchType" id="searchType" onchange="this.form.submit()">
             <option value="audio" {% if search_type == "audio" %}selected{% endif %}>Audio transcription</option>
