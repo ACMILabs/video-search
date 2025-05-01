@@ -78,17 +78,17 @@ def home():
         examples = examples.strip().split(',')
     else:
         # Try getting pre-generated supercuts as examples
-        examples = sorted([
+        examples = sorted({
             stem.split('_')[1].replace('-', ' ')
             for stem in (
-                p.stem
-                for p in Path('app/static/videos').glob('*.mp4')
+                path.stem
+                for path in Path('app/static/videos').glob('*.mp4')
             )
             if len(stem.split('_')) > 1
-        ])
+        })
 
     if supercuts and query and results:
-        filename = get_filename(query, page)
+        filename = get_filename(query, page, search_type)
         output_path = f'app/static/videos/{filename}'
         if os.path.isfile(output_path):
             supercut = filename
@@ -104,7 +104,7 @@ def home():
             # Start background thread for supercut generation
             thread = threading.Thread(
                 target=generate_supercut_background,
-                args=(query, results, task_id, page),
+                args=(query, results, task_id, page, search_type),
             )
             thread.start()
             # Render progress page
@@ -308,13 +308,15 @@ def duration_filter(segment):
     return end_time - start_time
 
 
-def get_filename(query, page):
+def get_filename(query, page, search_type):
     """
-    Returns the filename of a supercut video from a query and page number.
+    Returns the filename of a supercut video from a query, page number, and search type.
     """
     filename = f'supercut_{slugify(query)}'
     if page and page > 1:
-        filename = f'{filename}_{page}'
+        filename += f'_{page}'
+    if search_type and not search_type == 'audio':
+        filename += f'_{search_type}'
     return f'{filename}.mp4'
 
 
@@ -325,7 +327,7 @@ def cut_resize_to_temp(job):
     path, start, end, fade = job
     with VideoFileClip(path) as base:
         clip = base.subclipped(start, end)
-        if fade:
+        if fade and clip.audio:
             fade_in = clip.audio.with_effects([AudioFadeIn(0.5)])
             fade_out = fade_in.with_effects([AudioFadeOut(0.5)])
             clip = clip.with_audio(fade_out)
@@ -350,21 +352,36 @@ def cut_resize_to_temp(job):
         return temp_file.name
 
 
-# pylint: disable=too-many-locals,too-many-statements
-def generate_supercut_background(query, search_results, task_id, page):
+# pylint: disable=too-many-locals,too-many-statements,too-many-branches
+def generate_supercut_background(query, search_results, task_id, page, search_type):
     """
     Build the super-cut in a worker pool, update progress, write poster frame.
     """
-    filename = get_filename(query, page)
+    filename = get_filename(query, page, search_type)
     output_path = f'app/static/videos/{filename}'
     clip_jobs = []
     for hit in search_results['hits']['hits']:
         path = hit['_source']['web_resource']
-        for seg in hit['_source']['transcription']['segments']:
-            if query.lower() in seg['text'].lower():
-                start = max(seg['start'] - 0.5, 0)
-                end = seg['end'] + 0.5
-                clip_jobs.append((path, start, end, True))
+        if search_type == 'audio':
+            for segment in hit['_source']['transcription']['segments']:
+                if query.lower() in segment['text'].lower():
+                    start = max(segment['start'] - 0.5, 0)
+                    end = segment['end'] + 0.5
+                    clip_jobs.append((path, start, end, True))
+        elif search_type == 'image':
+            for segment in hit['_source']['classification']['captions']['huggingface']:
+                for prediction in segment['predictions']:
+                    if query.lower() in prediction['prediction'].lower():
+                        start = max(segment['timestamp'] - 0.5, 0)
+                        end = segment['timestamp'] + 4.5
+                        clip_jobs.append((path, start, end, True))
+        elif search_type == 'audioDescription':
+            for segment in hit['_source']['classification']['captions']['clap']:
+                for prediction in segment['predictions']:
+                    if query.lower() in prediction['prediction'].lower():
+                        start = max(segment['timestamp'] - 0.5, 0)
+                        end = segment['timestamp'] + 4.5
+                        clip_jobs.append((path, start, end, True))
 
     total_steps = len(clip_jobs) + 2
     temp_paths = []
