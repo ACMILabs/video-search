@@ -1,6 +1,7 @@
 import json
 import multiprocessing
 import os
+import platform
 import re
 import statistics
 import tempfile
@@ -8,15 +9,16 @@ import threading
 import time
 import uuid
 from collections import Counter
+from concurrent.futures import ProcessPoolExecutor
 from math import exp, floor
 from pathlib import Path
-from concurrent.futures import ProcessPoolExecutor
 
 import elasticsearch
 import requests
 from elasticsearch import Elasticsearch
 from flask import Flask, Response, render_template, request
-from moviepy import (ColorClip, CompositeVideoClip, VideoFileClip, concatenate_videoclips)
+from moviepy import (ColorClip, CompositeVideoClip, VideoFileClip,
+                     concatenate_videoclips)
 from moviepy.audio.fx import AudioFadeIn, AudioFadeOut
 from PIL import Image
 from slugify import slugify
@@ -37,6 +39,10 @@ EXPORT_VIDEO_JSON = os.getenv('EXPORT_VIDEO_JSON', 'false').lower() == 'true'
 REMOVE_QUERY_PARAMS = os.getenv('REMOVE_QUERY_PARAMS', 'false').lower() == 'true'
 EXAMPLES = os.getenv('EXAMPLES', None)
 SUPERCUT_RESOLUTION = (1280, 720)
+IS_MAC = platform.system() == 'Darwin'
+VIDEO_CODEC = 'h264_videotoolbox' if IS_MAC else 'libx264'
+PRESET = 'realtime' if IS_MAC else 'veryfast'
+THREADS = 0 if IS_MAC else multiprocessing.cpu_count()
 
 application = Flask(__name__)
 application.config['TEMPLATES_AUTO_RELOAD'] = DEBUG
@@ -372,14 +378,14 @@ def generate_supercut_background(query, search_results, task_id, page):
         supercut_tasks[task_id]['status'] = 'saving'
         supercut_tasks[task_id]['progress'] = (len(clip_jobs)+1) / total_steps * 100
 
-    clips = [VideoFileClip(p) for p in temp_paths]     # open temp files
+    clips = [VideoFileClip(temp_path) for temp_path in temp_paths]
     supercut = concatenate_videoclips(clips, method='compose')
     supercut.write_videofile(
         output_path,
-        codec='libx264',
+        codec=VIDEO_CODEC,
         audio_codec='aac',
-        preset='veryfast',
-        threads=multiprocessing.cpu_count(),
+        preset=PRESET,
+        threads=THREADS,
     )
 
     final_clip = VideoFileClip(output_path)
