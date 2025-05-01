@@ -87,7 +87,7 @@ def home():
             if len(stem.split('_')) > 1
         })
 
-    if supercuts and query and results:
+    if supercuts and query and results and results.get('hits') and results.get('hits').get('hits'):
         filename = get_filename(query, page, search_type)
         output_path = f'app/static/videos/{filename}'
         if os.path.isfile(output_path):
