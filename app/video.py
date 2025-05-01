@@ -3,20 +3,20 @@ import multiprocessing
 import os
 import re
 import statistics
+import tempfile
 import threading
 import time
 import uuid
 from collections import Counter
 from math import exp, floor
 from pathlib import Path
+from concurrent.futures import ProcessPoolExecutor
 
 import elasticsearch
-import numpy as np
 import requests
 from elasticsearch import Elasticsearch
 from flask import Flask, Response, render_template, request
-from moviepy import (ColorClip, CompositeVideoClip, VideoFileClip,
-                     concatenate_videoclips)
+from moviepy import (ColorClip, CompositeVideoClip, VideoFileClip, concatenate_videoclips)
 from moviepy.audio.fx import AudioFadeIn, AudioFadeOut
 from PIL import Image
 from slugify import slugify
@@ -36,6 +36,7 @@ PORT = int(os.getenv('PORT', '8081'))
 EXPORT_VIDEO_JSON = os.getenv('EXPORT_VIDEO_JSON', 'false').lower() == 'true'
 REMOVE_QUERY_PARAMS = os.getenv('REMOVE_QUERY_PARAMS', 'false').lower() == 'true'
 EXAMPLES = os.getenv('EXAMPLES', None)
+SUPERCUT_RESOLUTION = (1280, 720)
 
 application = Flask(__name__)
 application.config['TEMPLATES_AUTO_RELOAD'] = DEBUG
@@ -311,94 +312,91 @@ def get_filename(query, page):
     return f'{filename}.mp4'
 
 
+def cut_resize_to_temp(job):
+    """
+    Worker: (video_path, start, end, fade) → temp-mp4-path
+    """
+    path, start, end, fade = job
+    with VideoFileClip(path) as base:
+        clip = base.subclipped(start, end)
+        if fade:
+            fade_in = clip.audio.with_effects([AudioFadeIn(0.5)])
+            fade_out = fade_in.with_effects([AudioFadeOut(0.5)])
+            clip = clip.with_audio(fade_out)
+        resized_clip = clip.resized(height=SUPERCUT_RESOLUTION[1])
+        if resized_clip.w > SUPERCUT_RESOLUTION[0]:
+            resized_clip = clip.resized(width=SUPERCUT_RESOLUTION[0])
+        background = ColorClip(
+            size=SUPERCUT_RESOLUTION,
+            color=(0, 0, 0),
+            duration=resized_clip.duration,
+        )
+        padded = CompositeVideoClip([background, resized_clip.with_position('center')])
+        with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as temp_file:
+            padded.write_videofile(
+                temp_file.name,
+                codec='libx264',
+                audio_codec='aac',
+                ffmpeg_params=['-ar', '48000', '-ac', '2',],
+                preset='veryfast',
+                threads=multiprocessing.cpu_count(),
+            )
+        return temp_file.name
+
+
 # pylint: disable=too-many-locals,too-many-statements
 def generate_supercut_background(query, search_results, task_id, page):
     """
-    Run supercut generation in a background thread and update task status.
+    Build the super-cut in a worker pool, update progress, write poster frame.
     """
     filename = get_filename(query, page)
     output_path = f'app/static/videos/{filename}'
-    total_clips = sum(
-        1 for result in search_results['hits']['hits']
-        for segment in result['_source']['transcription']['segments']
-        if query.lower() in segment['text'].lower()
+    clip_jobs = []
+    for hit in search_results['hits']['hits']:
+        path = hit['_source']['web_resource']
+        for seg in hit['_source']['transcription']['segments']:
+            if query.lower() in seg['text'].lower():
+                start = max(seg['start'] - 0.5, 0)
+                end = seg['end'] + 0.5
+                clip_jobs.append((path, start, end, True))
+
+    total_steps = len(clip_jobs) + 2
+    temp_paths = []
+    with ProcessPoolExecutor(max_workers=os.cpu_count()) as pool:
+        for i, tmp in enumerate(pool.map(cut_resize_to_temp, clip_jobs), start=1):
+            temp_paths.append(tmp)
+            with lock:
+                supercut_tasks[task_id]['progress'] = i / total_steps * 100
+
+    with lock:
+        supercut_tasks[task_id]['status'] = 'saving'
+        supercut_tasks[task_id]['progress'] = (len(clip_jobs)+1) / total_steps * 100
+
+    clips = [VideoFileClip(p) for p in temp_paths]     # open temp files
+    supercut = concatenate_videoclips(clips, method='compose')
+    supercut.write_videofile(
+        output_path,
+        codec='libx264',
+        audio_codec='aac',
+        preset='veryfast',
+        threads=multiprocessing.cpu_count(),
     )
-    total_clips += 1  # add resize
-    clips = []
-    processed_clips = 0
-    video_cache = {}
 
-    for result in search_results['hits']['hits']:
-        video_path = result['_source']['web_resource']
-        if video_path not in video_cache:
-            video_cache[video_path] = VideoFileClip(video_path)
-        base_clip = video_cache[video_path]
-        for segment in result['_source']['transcription']['segments']:
-            if query.lower() in segment['text'].lower():
-                # Extend clip by 0.5 s on either side, but keep within the video’s bounds
-                start_time = max(float(segment['start']) - 0.5, 0)
-                end_time = min(float(segment['end']) + 0.5, base_clip.duration)
-                try:
-                    clip = base_clip.subclipped(start_time, end_time)
-                    # Fade the audio in and out
-                    fade_in = clip.audio.with_effects([AudioFadeIn(0.5)])
-                    fade_out = fade_in.with_effects([AudioFadeOut(0.5)])
-                    clip = clip.with_audio(fade_out)
-                    clips.append(clip)
-                except ValueError:
-                    pass
-                processed_clips += 1
-                progress = (processed_clips / total_clips) * 100 if total_clips > 0 else 100
-                with lock:
-                    supercut_tasks[task_id]['progress'] = progress
+    final_clip = VideoFileClip(output_path)
+    frame = final_clip.get_frame(1.0)
+    img = Image.fromarray(frame.astype('uint8'))
+    if img.mode == 'RGBA':
+        img = img.convert('RGB')
+    img.save(output_path.replace('.mp4', '.jpg'), 'JPEG')
+    final_clip.close()
 
-    if clips:
-        target_resolution = (1280, 720)
-        resized_clips = []
-        for clip in clips:
-            # Resize to fit within target_resolution, preserving aspect ratio
-            resized_clip = clip.resized(height=target_resolution[1])  # Scale based on height
-            if resized_clip.w > target_resolution[0]:  # If too wide, scale based on width instead
-                resized_clip = clip.resized(width=target_resolution[0])
+    for file_path in temp_paths:
+        os.remove(file_path)
 
-            # Create a colored background clip
-            background = ColorClip(size=target_resolution, color=(0, 0, 0), duration=clip.duration)
-
-            # Center the resized clip on the background
-            padded_clip = CompositeVideoClip([background, resized_clip.with_position('center')])
-            resized_clips.append(padded_clip)
-
-        processed_clips += 1
-        progress = (processed_clips / total_clips) * 100 if total_clips > 0 else 100
-        with lock:
-            supercut_tasks[task_id]['status'] = 'saving'
-
-        supercut = concatenate_videoclips(resized_clips, method='compose')
-        Path('app/static/videos').mkdir(exist_ok=True)
-        supercut.write_videofile(
-            output_path,
-            codec='libx264',
-            audio_codec='aac',
-            preset='veryfast',
-            bitrate='2000k',
-            threads=multiprocessing.cpu_count(),
-        )
-
-        frame = supercut.get_frame(1.0)
-        frame_image = Image.fromarray(np.uint8(frame))
-        if frame_image.mode == 'RGBA':
-            frame_image = frame_image.convert('RGB')
-        frame_image.save(output_path.replace('.mp4', '.jpg'), 'JPEG')
-        for clip in clips:
-            clip.close()
-        supercut.close()
-        with lock:
-            supercut_tasks[task_id]['status'] = 'completed'
-            supercut_tasks[task_id]['filename'] = filename
-    else:
-        with lock:
-            supercut_tasks[task_id]['status'] = 'completed'
-            supercut_tasks[task_id]['filename'] = None
+    with lock:
+        supercut_tasks[task_id]['status'] = 'completed'
+        supercut_tasks[task_id]['progress'] = 100
+        supercut_tasks[task_id]['filename'] = filename
 
 
 class Search():
