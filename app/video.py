@@ -326,7 +326,7 @@ def cut_resize_to_temp(job):
     """
     path, start, end, fade = job
     with VideoFileClip(path) as base:
-        clip = base.subclipped(start, end)
+        clip = base.subclipped(start, min(end, base.duration))
         if fade and clip.audio:
             fade_in = clip.audio.with_effects([AudioFadeIn(0.5)])
             fade_out = fade_in.with_effects([AudioFadeOut(0.5)])
@@ -345,7 +345,7 @@ def cut_resize_to_temp(job):
                 temp_file.name,
                 codec='libx264',
                 audio_codec='aac',
-                ffmpeg_params=['-ar', '48000', '-ac', '2',],
+                ffmpeg_params=['-ar', '48000', '-ac', '2'],
                 preset='veryfast',
                 threads=multiprocessing.cpu_count(),
             )
@@ -387,9 +387,12 @@ def generate_supercut_background(query, search_results, task_id, page, search_ty
     temp_paths = []
     with ProcessPoolExecutor(max_workers=os.cpu_count()) as pool:
         for i, tmp in enumerate(pool.map(cut_resize_to_temp, clip_jobs), start=1):
-            temp_paths.append(tmp)
-            with lock:
-                supercut_tasks[task_id]['progress'] = i / total_steps * 100
+            try:
+                temp_paths.append(tmp)
+                with lock:
+                    supercut_tasks[task_id]['progress'] = i / total_steps * 100
+            except KeyError:
+                pass
 
     with lock:
         supercut_tasks[task_id]['status'] = 'saving'
