@@ -359,6 +359,9 @@ def generate_supercut_background(query, search_results, task_id, page, search_ty
     """
     filename = get_filename(query, page, search_type)
     output_path = f'app/static/videos/{filename}'
+    output_dir = os.path.dirname(output_path)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     clip_jobs = []
     for hit in search_results['hits']['hits']:
         path = hit['_source']['web_resource']

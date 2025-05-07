@@ -14,7 +14,7 @@ lint:
 	# Lint the python code
 	pylint *
 	flake8
-	isort -rc --check-only .
+	isort --check-only .
 test:
 	# Run python tests
 	pytest -v -s tests/tests.py
