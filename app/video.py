@@ -39,6 +39,7 @@ EXPORT_VIDEO_JSON = os.getenv('EXPORT_VIDEO_JSON', 'false').lower() == 'true'
 REMOVE_QUERY_PARAMS = os.getenv('REMOVE_QUERY_PARAMS', 'false').lower() == 'true'
 EXAMPLES = os.getenv('EXAMPLES', None)
 SUPERCUT_RESOLUTION = (1280, 720)
+IMAGE_AUDIO_CAPTION_DURATION = 4.5
 IS_MAC = platform.system() == 'Darwin'
 VIDEO_CODEC = 'h264_videotoolbox' if IS_MAC else 'libx264'
 PRESET = 'realtime' if IS_MAC else 'veryfast'
@@ -303,9 +304,11 @@ def duration_filter(segment):
     """
     Returns the duration of a segment.
     """
-    start_time = max(float(segment['start']) - 0.5, 0)
-    end_time = float(segment['end']) + 0.5
-    return end_time - start_time
+    if segment.get('start'):
+        start_time = max(float(segment['start']) - 0.5, 0)
+        end_time = float(segment['end']) + 0.5
+        return end_time - start_time
+    return IMAGE_AUDIO_CAPTION_DURATION + 0.5
 
 
 def get_filename(query, page, search_type):
@@ -376,14 +379,14 @@ def generate_supercut_background(query, search_results, task_id, page, search_ty
                 for prediction in segment['predictions']:
                     if query.lower() in prediction['prediction'].lower():
                         start = max(segment['timestamp'] - 0.5, 0)
-                        end = segment['timestamp'] + 4.5
+                        end = segment['timestamp'] + IMAGE_AUDIO_CAPTION_DURATION
                         clip_jobs.append((path, start, end, True))
         elif search_type == 'audioDescription':
             for segment in hit['_source']['classification']['captions']['clap']:
                 for prediction in segment['predictions']:
                     if query.lower() in prediction['prediction'].lower():
                         start = max(segment['timestamp'] - 0.5, 0)
-                        end = segment['timestamp'] + 4.5
+                        end = segment['timestamp'] + IMAGE_AUDIO_CAPTION_DURATION
                         clip_jobs.append((path, start, end, True))
 
     total_steps = len(clip_jobs) + 2
