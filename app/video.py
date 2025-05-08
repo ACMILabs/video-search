@@ -1,15 +1,27 @@
 import json
+import multiprocessing
 import os
+import platform
 import re
 import statistics
+import tempfile
+import threading
+import time
+import uuid
 from collections import Counter
+from concurrent.futures import ProcessPoolExecutor
 from math import exp, floor
 from pathlib import Path
 
 import elasticsearch
 import requests
 from elasticsearch import Elasticsearch
-from flask import Flask, render_template, request
+from flask import Flask, Response, render_template, request
+from moviepy import (ColorClip, CompositeVideoClip, VideoFileClip,
+                     concatenate_videoclips)
+from moviepy.audio.fx import AudioFadeIn, AudioFadeOut
+from PIL import Image
+from slugify import slugify
 
 from app.utils import STOPWORDS
 
@@ -26,9 +38,19 @@ PORT = int(os.getenv('PORT', '8081'))
 EXPORT_VIDEO_JSON = os.getenv('EXPORT_VIDEO_JSON', 'false').lower() == 'true'
 REMOVE_QUERY_PARAMS = os.getenv('REMOVE_QUERY_PARAMS', 'false').lower() == 'true'
 EXAMPLES = os.getenv('EXAMPLES', None)
+SUPERCUT_RESOLUTION = (1280, 720)
+IMAGE_AUDIO_CAPTION_DURATION = 4.5
+IS_MAC = platform.system() == 'Darwin'
+VIDEO_CODEC = 'h264_videotoolbox' if IS_MAC else 'libx264'
+PRESET = 'realtime' if IS_MAC else 'veryfast'
+THREADS = 0 if IS_MAC else multiprocessing.cpu_count()
 
 application = Flask(__name__)
 application.config['TEMPLATES_AUTO_RELOAD'] = DEBUG
+
+# Global dictionary to track supercut tasks
+supercut_tasks = {}
+lock = threading.Lock()
 
 
 @application.route('/')
@@ -38,12 +60,14 @@ def home():
     """
     results = None
     errors = None
+    supercut = None
     examples = EXAMPLES or []
     args = request.args.copy()
     query = request.args.get('query', None)
     size = args.get('size', type=int, default=20)
     page = args.get('page', type=int, default=1)
     search_type = request.args.get('searchType', 'audio')
+    supercuts = request.args.get('supercuts', 'off').lower() == 'on'
 
     if query:
         query = sanitise_string(query)
@@ -53,6 +77,48 @@ def home():
 
     if EXAMPLES:
         examples = examples.strip().split(',')
+    else:
+        # Try getting pre-generated supercuts as examples
+        examples = sorted({
+            stem.split('_')[1].replace('-', ' ')
+            for stem in (
+                path.stem
+                for path in Path('app/static/videos').glob('*.mp4')
+            )
+            if len(stem.split('_')) > 1
+        })
+
+    if supercuts and query and results and results.get('hits') and results.get('hits').get('hits'):
+        filename = get_filename(query, page, search_type)
+        output_path = f'app/static/videos/{filename}'
+        if os.path.isfile(output_path):
+            supercut = filename
+        else:
+            # Generate a unique task ID
+            task_id = str(uuid.uuid4())
+            with lock:
+                supercut_tasks[task_id] = {
+                    'status': 'in_progress',
+                    'progress': 0,
+                    'filename': None,
+                }
+            # Start background thread for supercut generation
+            thread = threading.Thread(
+                target=generate_supercut_background,
+                args=(query, results, task_id, page, search_type),
+            )
+            thread.start()
+            # Render progress page
+            return render_template(
+                'progress.html',
+                task_id=task_id,
+                query=query,
+                results=results,
+                search_type=search_type,
+                size=size,
+                page=page,
+                errors=errors,
+            )
 
     return render_template(
         'index.html',
@@ -63,6 +129,8 @@ def home():
         page=page,
         errors=errors,
         examples=examples,
+        supercut=supercut,
+        supercuts=supercuts,
     )
 
 
@@ -79,6 +147,30 @@ def video_detail(video_id):
         video=video,
         export_json=EXPORT_VIDEO_JSON,
     )
+
+
+@application.route('/supercut_progress/<task_id>')
+def supercut_progress(task_id):
+    """
+    Stream progress updates for supercut generation via EventSource.
+    """
+    def generate():
+        while True:
+            with lock:
+                task = supercut_tasks.get(task_id)
+                if task:
+                    if task['status'] == 'in_progress':
+                        yield f"data: {task['progress']}\n\n"
+                    elif task['status'] == 'saving':
+                        yield f"data: {task['status']}\n\n"
+                    elif task['status'] == 'completed':
+                        if task['filename']:
+                            yield f"data: completed {task['filename']}\n\n"
+                        else:
+                            yield "data: no_clips\n\n"
+                        break
+            time.sleep(1)  # Poll every second
+    return Response(generate(), mimetype='text/event-stream')
 
 
 @application.template_filter('tags_json_to_string')
@@ -197,6 +289,146 @@ def sanitise_string(input_string):
     """
     sanitized_string = re.sub(r"[^a-z0-9,' ]", '', input_string.lower())
     return sanitized_string
+
+
+@application.template_filter('poster')
+def poster_from_video_filter(video_file):
+    """
+    Returns the poster file name from a video file name.
+    """
+    return video_file.replace('.mp4', '.jpg')
+
+
+@application.template_filter('duration')
+def duration_filter(segment):
+    """
+    Returns the duration of a segment.
+    """
+    if segment.get('start'):
+        start_time = max(float(segment['start']) - 0.5, 0)
+        end_time = float(segment['end']) + 0.5
+        return end_time - start_time
+    return IMAGE_AUDIO_CAPTION_DURATION + 0.5
+
+
+def get_filename(query, page, search_type):
+    """
+    Returns the filename of a supercut video from a query, page number, and search type.
+    """
+    filename = f'supercut_{slugify(query)}'
+    if page and page > 1:
+        filename += f'_{page}'
+    if search_type and not search_type == 'audio':
+        filename += f'_{search_type}'
+    return f'{filename}.mp4'
+
+
+def cut_resize_to_temp(job):
+    """
+    Worker: (video_path, start, end, fade) → temp-mp4-path
+    """
+    path, start, end, fade = job
+    with VideoFileClip(path) as base:
+        clip = base.subclipped(start, min(end, base.duration))
+        if fade and clip.audio:
+            fade_in = clip.audio.with_effects([AudioFadeIn(0.5)])
+            fade_out = fade_in.with_effects([AudioFadeOut(0.5)])
+            clip = clip.with_audio(fade_out)
+        resized_clip = clip.resized(height=SUPERCUT_RESOLUTION[1])
+        if resized_clip.w > SUPERCUT_RESOLUTION[0]:
+            resized_clip = clip.resized(width=SUPERCUT_RESOLUTION[0])
+        background = ColorClip(
+            size=SUPERCUT_RESOLUTION,
+            color=(0, 0, 0),
+            duration=resized_clip.duration,
+        )
+        padded = CompositeVideoClip([background, resized_clip.with_position('center')])
+        with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as temp_file:
+            padded.write_videofile(
+                temp_file.name,
+                codec='libx264',
+                audio_codec='aac',
+                ffmpeg_params=['-ar', '48000', '-ac', '2'],
+                preset='veryfast',
+                threads=multiprocessing.cpu_count(),
+            )
+        return temp_file.name
+
+
+# pylint: disable=too-many-locals,too-many-statements,too-many-branches
+def generate_supercut_background(query, search_results, task_id, page, search_type):
+    """
+    Build the super-cut in a worker pool, update progress, write poster frame.
+    """
+    filename = get_filename(query, page, search_type)
+    output_path = f'app/static/videos/{filename}'
+    output_dir = os.path.dirname(output_path)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    clip_jobs = []
+    for hit in search_results['hits']['hits']:
+        path = hit['_source']['web_resource']
+        if search_type == 'audio':
+            for segment in hit['_source']['transcription']['segments']:
+                if query.lower() in segment['text'].lower():
+                    start = max(segment['start'] - 0.5, 0)
+                    end = segment['end'] + 0.5
+                    clip_jobs.append((path, start, end, True))
+        elif search_type == 'image':
+            for segment in hit['_source']['classification']['captions']['huggingface']:
+                for prediction in segment['predictions']:
+                    if query.lower() in prediction['prediction'].lower():
+                        start = max(segment['timestamp'] - 0.5, 0)
+                        end = segment['timestamp'] + IMAGE_AUDIO_CAPTION_DURATION
+                        clip_jobs.append((path, start, end, True))
+        elif search_type == 'audioDescription':
+            for segment in hit['_source']['classification']['captions']['clap']:
+                for prediction in segment['predictions']:
+                    if query.lower() in prediction['prediction'].lower():
+                        start = max(segment['timestamp'] - 0.5, 0)
+                        end = segment['timestamp'] + IMAGE_AUDIO_CAPTION_DURATION
+                        clip_jobs.append((path, start, end, True))
+
+    total_steps = len(clip_jobs) + 2
+    temp_paths = []
+    with ProcessPoolExecutor(max_workers=os.cpu_count()) as pool:
+        for i, tmp in enumerate(pool.map(cut_resize_to_temp, clip_jobs), start=1):
+            try:
+                temp_paths.append(tmp)
+                with lock:
+                    supercut_tasks[task_id]['progress'] = i / total_steps * 100
+            except KeyError:
+                pass
+
+    with lock:
+        supercut_tasks[task_id]['status'] = 'saving'
+        supercut_tasks[task_id]['progress'] = (len(clip_jobs)+1) / total_steps * 100
+
+    clips = [VideoFileClip(temp_path) for temp_path in temp_paths]
+    supercut = concatenate_videoclips(clips, method='compose')
+    supercut.write_videofile(
+        output_path,
+        codec=VIDEO_CODEC,
+        audio_codec='aac',
+        preset=PRESET,
+        threads=THREADS,
+    )
+
+    final_clip = VideoFileClip(output_path)
+    frame = final_clip.get_frame(1.0)
+    img = Image.fromarray(frame.astype('uint8'))
+    if img.mode == 'RGBA':
+        img = img.convert('RGB')
+    img.save(output_path.replace('.mp4', '.jpg'), 'JPEG')
+    final_clip.close()
+
+    for file_path in temp_paths:
+        os.remove(file_path)
+
+    with lock:
+        supercut_tasks[task_id]['status'] = 'completed'
+        supercut_tasks[task_id]['progress'] = 100
+        supercut_tasks[task_id]['filename'] = filename
 
 
 class Search():

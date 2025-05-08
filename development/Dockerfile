@@ -1,6 +1,6 @@
 FROM python:alpine
 
-RUN apk add --update make
+RUN apk add --update make ffmpeg
 
 COPY ./requirements/base.txt /code/requirements/base.txt
 COPY ./requirements/test.txt /code/requirements/test.txt

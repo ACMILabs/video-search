@@ -14,7 +14,9 @@
     </header>
 
     <form action="/" method="get">
-        <input name="query" type="text" placeholder="Search terms" value="{% if query%}{{ query }}{% else %}{% endif %}" autofocus><button>Search</button><br />
+        <input type="hidden" name="page" value="{{ page }}">
+        <input type="hidden" name="size" value="{{ size }}">
+        <input name="query" type="text" placeholder="Search terms" value="{% if query%}{{ query }}{% else %}{% endif %}" autofocus><button>Search</button>{% if query and results %}<button type="submit" name="supercuts" value="on" class="supercuts">Supercut</button>{% endif %}<br />
         <select name="searchType" id="searchType" onchange="this.form.submit()">
             <option value="audio" {% if search_type == "audio" %}selected{% endif %}>Audio transcription</option>
             <option value="audioDescription" {% if search_type == "audioDescription" %}selected{% endif %}>Audio description</option>
@@ -23,7 +25,63 @@
     </form>
 
     {% if query and results %}
-        <h3>Results: {{ results.hits.total.value }}</h3>
+        {% if supercut %}
+            <h2>Supercut:</h2>
+            <video
+                id="supercut"
+                src="{{ url_for('static', filename='videos/' + supercut) }}"
+                poster="{{ url_for('static', filename='videos/' + supercut|poster) }}"
+                controls
+                width="100%"
+                preload="none"
+                webkit-playsinline
+                playsinline
+            >
+            </video>
+            <ol class="supercut-credits">
+                {% for result in results.hits.hits %}
+                    {% if search_type == 'audio' %}
+                        {% for segment in result._source.transcription.segments if query|lower in segment.text|lower %}
+                            <li data-duration="{{ segment|duration }}">
+                                {% if result._source.works|length > 0 %}
+                                    <a href="https://www.acmi.net.au/works/{{ result._source.works.0.id }}--{{ result._source.works.0.slug }}/" target="_blank">{{ result._source.works.0.title }}</a>
+                                {% else %}
+                                    Untitled
+                                {% endif %}
+                                <br />{{ segment.start|int|seconds_to_timecode }} - {{ segment.end|int|seconds_to_timecode }}
+                            </li>
+                        {% endfor %}
+                    {% elif search_type == 'image' %}
+                        {% for segment in result._source.classification.captions.huggingface %}
+                            {% for prediction in segment.predictions if query|lower in prediction.prediction|lower %}
+                                <li data-duration="{{ segment|duration }}">
+                                    {% if result._source.works|length > 0 %}
+                                        <a href="https://www.acmi.net.au/works/{{ result._source.works.0.id }}--{{ result._source.works.0.slug }}/" target="_blank">{{ result._source.works.0.title }}</a>
+                                    {% else %}
+                                        Untitled
+                                    {% endif %}
+                                    <br />{{ segment.timestamp|int|seconds_to_timecode }}
+                                </li>
+                            {% endfor %}
+                        {% endfor %}
+                    {% elif search_type == 'audioDescription' %}
+                        {% for segment in result._source.classification.captions.clap %}
+                            {% for prediction in segment.predictions if query|lower in prediction.prediction|lower %}
+                                <li data-duration="{{ segment|duration }}">
+                                    {% if result._source.works|length > 0 %}
+                                        <a href="https://www.acmi.net.au/works/{{ result._source.works.0.id }}--{{ result._source.works.0.slug }}/" target="_blank">{{ result._source.works.0.title }}</a>
+                                    {% else %}
+                                        Untitled
+                                    {% endif %}
+                                    <br />{{ segment.timestamp|int|seconds_to_timecode }}
+                                </li>
+                            {% endfor %}
+                        {% endfor %}
+                    {% endif %}
+                {% endfor %}
+            </ol>
+        {% endif %}
+        <h3>Search results: {{ results.hits.total.value }}</h3>
         {% if results.hits.total.value > size %}
         <p>
             {% if page > 1 %}<a href="/?query={{ request.args.query }}&searchType={{ request.args.searchType }}&size={{ size }}&page={{ page - 1 }}">Previous</a>{% endif %}
@@ -46,6 +104,9 @@
                 >
                 </video>
                 <h3><a href="/videos/{{ result._source.id }}/">{{ result._source.title }}</a></h3>
+                {% if result._source.works|length > 0 %}
+                    <p><a href="https://www.acmi.net.au/works/{{ result._source.works.0.id }}--{{ result._source.works.0.slug }}/" target="_blank">{{ result._source.works.0.title }}</a></p>
+                {% endif %}
                 <p><strong>Segments</strong>: </p>
                 {% if search_type == "audio" %}
                 <dl class="segments">

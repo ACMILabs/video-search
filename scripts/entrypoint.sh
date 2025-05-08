@@ -11,6 +11,6 @@ else
         --pythonpath $PYTHON_PATH \
         --workers 2 \
         --bind 0.0.0.0:$PORT \
-        --timeout 120 \
+        --timeout 12000 \
         --reload
 fi

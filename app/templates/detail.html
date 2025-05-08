@@ -30,6 +30,10 @@
                 <dd>{{ video._source.master_metadata.duration_hms }}</dd>
                 <dt>Metadata</dt>
                 <dd>{{ video._source.master_metadata.width }} x {{ video._source.master_metadata.height }} @ {{ video._source.master_metadata.video_frame_rate }} fps</dd>
+                {% if video._source.works|length > 0 %}
+                <dt>Work</dt>
+                <dd><a href="https://www.acmi.net.au/works/{{ video._source.works.0.id }}--{{ video._source.works.0.slug }}/" target="_blank">{{ video._source.works.0.title }}</a></dd>
+                {% endif %}
                 {% if export_json %}
                 <dt>JSON</dt>
                 <dd><a href="/static/json/{{ video._source.title }}.json">{{ video._source.title }}.json</a></dd>

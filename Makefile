@@ -14,7 +14,7 @@ lint:
 	# Lint the python code
 	pylint *
 	flake8
-	isort -rc --check-only .
+	isort --check-only .
 test:
 	# Run python tests
 	pytest -v -s tests/tests.py
@@ -27,3 +27,9 @@ up:
 	docker compose -f development/docker-compose.yml up
 down:
 	docker compose -f development/docker-compose.yml down
+build-local:
+	python3 -m venv venv && source venv/bin/activate && pip install -r requirements/base.txt
+down-local:
+	source venv/bin/activate && deactivate
+up-local:
+	source venv/bin/activate && python -u -m app.video
