@@ -2,6 +2,6 @@ flask
 gunicorn
 pytz
 requests
-elasticsearch<9
+elasticsearch
 moviepy
 python-slugify
