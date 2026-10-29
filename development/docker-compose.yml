@@ -22,6 +22,10 @@ services:
       ES_JAVA_OPTS: '-Xms512m -Xmx512m'
       logger.level: 'ERROR'
       xpack.security.enabled: false
+      # Reserve space for this local database without requiring a percentage of the host disk.
+      cluster.routing.allocation.disk.watermark.low: 10gb
+      cluster.routing.allocation.disk.watermark.high: 5gb
+      cluster.routing.allocation.disk.watermark.flood_stage: 2gb
     ulimits:
       memlock:
         soft: -1
