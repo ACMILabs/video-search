@@ -1,4 +1,5 @@
-FROM python:alpine
+# Keep Python compatible with MoviePy's Pillow dependency and its binary wheels.
+FROM python:3.13-alpine
 
 RUN apk add --update ffmpeg
 
